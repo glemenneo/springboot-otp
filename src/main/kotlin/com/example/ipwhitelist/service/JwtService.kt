@@ -35,6 +35,9 @@ class JwtService(
             .expiration
             .before(Date(System.currentTimeMillis()))
 
+    fun extractEmail(token: String): String =
+        extractClaims(token).subject
+
     private fun extractClaims(token: String): Claims {
         val parser = Jwts.parser()
             .verifyWith(jwtSecret)
