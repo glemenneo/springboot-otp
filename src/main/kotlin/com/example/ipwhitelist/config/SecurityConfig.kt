@@ -18,9 +18,11 @@ class SecurityConfig(
     @Bean
     fun filterChain(
         http: HttpSecurity,
-        jwtAuthFilter: JwtAuthFilter
+        jwtAuthFilter: JwtAuthFilter,
+
     ): DefaultSecurityFilterChain {
         return http
+            .csrf { it.disable() }
             .authorizeHttpRequests{
                 it
                 .requestMatchers("/api/auth/request-otp", "/api/auth/verify-otp")
