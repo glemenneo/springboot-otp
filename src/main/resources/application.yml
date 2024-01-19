@@ -1,0 +1,12 @@
+spring:
+  data:
+    redis:
+      database: 0
+      host: ${REDIS_HOST}
+      post: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      timeout: 60000
+jwt:
+  key: ${JWT_SECRET_KEY}
+  access-token-expiration: 3600000
+  refresh-token-expiration: 86400000
