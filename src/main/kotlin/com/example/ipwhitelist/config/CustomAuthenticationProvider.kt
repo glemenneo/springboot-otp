@@ -15,7 +15,7 @@ class CustomAuthenticationProvider(
     override fun authenticate(authentication: Authentication): Authentication {
         val email = authentication.name
         val otp = authentication.credentials.toString()
-        authService.verifyOtp(email, otp)
+        authService.verifyOtp("", email, otp)
         val userDetails = userDetailsService.loadUserByUsername(email)
         return UsernamePasswordAuthenticationToken(userDetails, null, userDetails.authorities)
 

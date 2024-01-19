@@ -13,6 +13,8 @@ data class Otp(
     val id: UUID,
     @Indexed
     val email: String,
+    @Indexed
+    val userAgent: String,
     val otp: String,
     @TimeToLive
     val expirationTime: Long
