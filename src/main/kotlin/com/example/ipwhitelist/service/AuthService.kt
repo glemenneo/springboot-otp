@@ -13,7 +13,7 @@ class AuthService(
             println("OTP: $otp")
         }
 
-        fun verifyOtp(email: String, otp: String): Boolean {
-            return otpService.validateOtp(email, otp)
+        fun verifyOtp(email: String, otp: String) {
+            otpService.validateOtp(email, otp)
         }
 }
