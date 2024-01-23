@@ -35,7 +35,7 @@ class JwtService(
             .expiration
             .before(Date(System.currentTimeMillis()))
 
-    fun extractEmail(token: String): String =
+    fun extractEmail(token: String): String? =
         extractClaims(token).subject
 
     private fun extractClaims(token: String): Claims {

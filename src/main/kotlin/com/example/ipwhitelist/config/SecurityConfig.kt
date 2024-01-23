@@ -2,33 +2,41 @@ package com.example.ipwhitelist.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.security.authentication.ProviderManager
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
-import org.springframework.security.web.DefaultSecurityFilterChain
+import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 
 @Configuration
 @EnableWebSecurity()
-class SecurityConfig {
+class SecurityConfig(
+    val otpAuthProvider: OtpAuthProvider
+) {
+
     @Bean
     fun filterChain(
         http: HttpSecurity,
-        jwtAuthFilter: JwtAuthFilter,
-
-    ): DefaultSecurityFilterChain {
+        otpAuthProcessingFilter: OtpAuthProcessingFilter,
+        jwtAuthFilter: JwtAuthFilter
+    ): SecurityFilterChain {
         return http
             .csrf { it.disable() }
             .authorizeHttpRequests{
                 it
                 .requestMatchers("/api/auth/request-otp", "/api/auth/verify-otp")
                 .permitAll()
+                .requestMatchers("/api/admin/*")
+                .hasRole("Admin")
                 .anyRequest()
-                .fullyAuthenticated()
+                .authenticated()
             }
             .sessionManagement {
                 it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             }
+            .authenticationManager(ProviderManager(listOf(otpAuthProvider)))
+            .addFilterBefore(otpAuthProcessingFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
             .build()
     }

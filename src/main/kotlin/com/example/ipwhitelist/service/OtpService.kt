@@ -2,7 +2,6 @@ package com.example.ipwhitelist.service
 
 import com.example.ipwhitelist.model.Otp
 import com.example.ipwhitelist.repository.OtpRepository
-import org.springframework.security.authentication.InternalAuthenticationServiceException
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -19,10 +18,8 @@ class OtpService(
         return otpEntity
     }
 
-    fun validateOtp(userAgent: String, email: String, otp: String) {
+    fun validateOtp(userAgent: String, email: String, otp: String): Boolean {
         val otpEntity = otpRepository.findByEmailAndUserAgent(email, userAgent) ?: throw NoSuchElementException("OTP not found")
-        if (otpEntity.otp != otp) {
-            throw InternalAuthenticationServiceException("Wrong OTP")
-        }
+        return otpEntity.otp != otp
     }
 }
