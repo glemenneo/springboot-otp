@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("api/auth")
 class AuthController(
     private val authService: AuthService,
-    private val authenticationService: AuthService
 ) {
 
     @PostMapping("/request-otp")
