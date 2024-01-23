@@ -5,7 +5,6 @@ import com.example.ipwhitelist.model.VerifyOtpRequest
 import com.example.ipwhitelist.model.VerifyOtpResponse
 import com.example.ipwhitelist.service.AuthService
 import org.springframework.http.ResponseEntity
-import org.springframework.security.authentication.InternalAuthenticationServiceException
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -31,13 +30,7 @@ class AuthController(
 
     @PostMapping("/verify-otp")
     fun verifyOtp(@RequestHeader(value = "User-Agent") userAgent: String, @RequestBody verifyOtpRequest: VerifyOtpRequest): ResponseEntity<VerifyOtpResponse> {
-        try {
-            authService.verifyOtp(userAgent, verifyOtpRequest.email, verifyOtpRequest.otp)
-            return ResponseEntity.ok(VerifyOtpResponse(token = "some jwt"))
-        } catch (error: NoSuchElementException) {
-            return ResponseEntity.notFound().build()
-        } catch (error: InternalAuthenticationServiceException) {
-            return ResponseEntity.badRequest().build()
-        }
+        println("API triggered")
+        return ResponseEntity.ok(null)
     }
 }

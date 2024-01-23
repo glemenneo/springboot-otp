@@ -8,9 +8,9 @@ import java.util.UUID
 class UserRepository {
 
     private val users = mutableListOf(
-        User(id= UUID.randomUUID(), name="John", email="john@gmail.com"),
-        User(id= UUID.randomUUID(), name="Jack", email="jack@gmail.com"),
-        User(id= UUID.randomUUID(), name="James", email="james@gmail.com"),
+        User(id= UUID.randomUUID(), name="John", email="john@gmail.com", role="User"),
+        User(id= UUID.randomUUID(), name="Jack", email="jack@gmail.com", role ="Admin"),
+        User(id= UUID.randomUUID(), name="James", email="james@gmail.com", role="User"),
     )
 
     fun save(user: User): Boolean = users.add(user)

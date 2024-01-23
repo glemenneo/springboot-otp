@@ -19,7 +19,7 @@ class OtpService(
     }
 
     fun validateOtp(userAgent: String, email: String, otp: String): Boolean {
-        val otpEntity = otpRepository.findByEmailAndUserAgent(email, userAgent) ?: throw NoSuchElementException("OTP not found")
-        return otpEntity.otp != otp
+        val otpEntity = otpRepository.findByEmailAndUserAgent(email, userAgent)
+        return otpEntity?.otp == otp
     }
 }

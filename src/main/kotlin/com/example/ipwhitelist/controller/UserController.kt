@@ -1,7 +1,7 @@
 package com.example.ipwhitelist.controller
 
 import com.example.ipwhitelist.model.User
-import com.example.ipwhitelist.model.UserRequest
+import com.example.ipwhitelist.model.CreateUserRequest
 import com.example.ipwhitelist.service.UserService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -20,7 +20,7 @@ import java.util.UUID
 class UserController(private val userService: UserService) {
 
     @PostMapping
-    fun createUser(@RequestBody user: UserRequest): User? = userService.createUser(user.toModel())
+    fun createUser(@RequestBody user: CreateUserRequest): User? = userService.createUser(user.toModel())
         ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create User, User already exists!")
 
     @GetMapping
@@ -38,5 +38,5 @@ class UserController(private val userService: UserService) {
         else throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found!")
     }
 
-    private fun UserRequest.toModel() = User(id = UUID.randomUUID(), name = name, email = email)
+    private fun CreateUserRequest.toModel() = User(id = UUID.randomUUID(), name = name, email = email, role = role)
 }

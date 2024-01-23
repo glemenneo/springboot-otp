@@ -5,6 +5,8 @@ import com.example.ipwhitelist.model.VerifyOtpRequest
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.core.Authentication
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter
@@ -14,6 +16,11 @@ import org.springframework.stereotype.Component
 @Component
 class OtpAuthProcessingFilter
     : AbstractAuthenticationProcessingFilter(AntPathRequestMatcher("/api/auth/verify-otp", "POST")) {
+    @Autowired
+    override fun setAuthenticationManager(authenticationManager: AuthenticationManager) {
+        super.setAuthenticationManager(authenticationManager)
+    }
+
     override fun attemptAuthentication(request: HttpServletRequest, response: HttpServletResponse): Authentication {
         val userAgent = request.getHeader("User-Agent")
         val body = request.reader.use { it.readText() }
