@@ -1,25 +1,14 @@
 package com.example.ipwhitelist.repository
 
 import com.example.ipwhitelist.model.User
+import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Repository
-class UserRepository {
-
-    private val users = mutableListOf(
-        User(id= UUID.randomUUID(), name="John", email="john@gmail.com", role="User"),
-        User(id= UUID.randomUUID(), name="Jack", email="jack@gmail.com", role ="Admin"),
-        User(id= UUID.randomUUID(), name="James", email="james@gmail.com", role="User"),
-    )
-
-    fun save(user: User): Boolean = users.add(user)
-
-    fun findByEmail(email: String): User? = users.find { it.email == email }
-
-    fun findByUuid(id: UUID): User? = users.find { it.id == id }
-
-    fun findAll(): Collection<User> = users
-
-    fun deleteByUuid(id: UUID): Boolean = users.removeIf { it.id == id }
+interface UserRepository : CrudRepository<User, String> {
+    fun save(user: User): User
+    fun findByEmail(email: String): User?
+    fun findByUuid(id: UUID): User?
+    fun deleteByUuid(id: UUID): Boolean
 }

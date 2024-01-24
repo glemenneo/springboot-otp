@@ -2,6 +2,7 @@ package com.example.ipwhitelist.controller
 
 import com.example.ipwhitelist.model.User
 import com.example.ipwhitelist.model.CreateUserRequest
+import com.example.ipwhitelist.model.UserResponse
 import com.example.ipwhitelist.service.UserService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -13,18 +14,21 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 import java.util.UUID
 
 @RestController
-@RequestMapping("api/users")
+@RequestMapping("/users")
 class UserController(private val userService: UserService) {
-
     @PostMapping
-    fun createUser(@RequestBody user: CreateUserRequest): User? = userService.createUser(user.toModel())
-        ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create User, User already exists!")
+    fun createUser(@RequestBody createUserRequest: CreateUserRequest): ResponseEntity<UserResponse> {
+        val userEntity = userService.createUser(createUserRequest)
+            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create User, User already exists!")
 
-    @GetMapping
-    fun listAll(): Collection<User> = userService.findAll()
+        val location =
+            ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(userEntity.id).toUri()
+        return ResponseEntity.created(location).body(userEntity.toResponse())
+    }
 
     @GetMapping("/{id}")
     fun findByUuid(@PathVariable id: UUID): User = userService.findByUuid(id)
@@ -38,5 +42,5 @@ class UserController(private val userService: UserService) {
         else throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found!")
     }
 
-    private fun CreateUserRequest.toModel() = User(id = UUID.randomUUID(), name = name, email = email, role = role)
+    private fun User.toResponse() = UserResponse(id = this.id, name = this.name, email = this.email, role = this.role)
 }
