@@ -31,12 +31,15 @@ class UserController(private val userService: UserService) {
     }
 
     @GetMapping("/{id}")
-    fun findByUuid(@PathVariable id: UUID): User = userService.findByUuid(id)
-        ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found!")
+    fun findById(@PathVariable id: UUID): ResponseEntity<UserResponse> {
+        val userEntity = userService.findById(id)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found!")
+        return ResponseEntity.ok().body(userEntity.toResponse())
+    }
 
     @DeleteMapping("/{id}")
-    fun deleteByUuid(@PathVariable id: UUID): ResponseEntity<Boolean> {
-        val isDeleted = userService.deleteByUuid(id)
+    fun deleteById(@PathVariable id: UUID): ResponseEntity<Void> {
+        val isDeleted = userService.deleteById(id)
 
         return if (isDeleted) ResponseEntity.noContent().build()
         else throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found!")

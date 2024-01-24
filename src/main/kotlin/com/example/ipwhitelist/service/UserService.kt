@@ -8,8 +8,9 @@ import org.springframework.stereotype.Service
 import java.util.UUID
 
 @Service
-class UserService(private val userRepository: UserRepository) {
-
+class UserService(
+    private val userRepository: UserRepository
+) {
     fun createUser(createUserRequest: CreateUserRequest): User? {
         val duplicate = userRepository.findByEmail(createUserRequest.email)
         if (duplicate != null) {
@@ -21,11 +22,20 @@ class UserService(private val userRepository: UserRepository) {
 
     }
 
-    fun findByEmail(email: String): User? = userRepository.findByEmail(email)
+    fun findByEmail(email: String): User? {
+        return userRepository.findByEmail(email)
+    }
 
-    fun findByUuid(id: UUID): User? = userRepository.findByUuid(id)
+    fun findById(id: UUID): User? {
+        return userRepository.findById(id)
+    }
 
-    fun deleteByUuid(id: UUID): Boolean = userRepository.deleteByUuid(id)
+    fun deleteById(id: UUID): Boolean {
+        this.findById(id) ?: return false
+
+        userRepository.deleteById(id)
+        return true
+    }
 
     private fun CreateUserRequest.toModel() =
         User(id = UUID.randomUUID(), name = this.name, email = this.email, role = this.role)

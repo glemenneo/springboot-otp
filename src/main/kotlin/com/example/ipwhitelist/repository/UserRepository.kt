@@ -9,6 +9,6 @@ import java.util.UUID
 interface UserRepository : CrudRepository<User, String> {
     fun save(user: User): User
     fun findByEmail(email: String): User?
-    fun findByUuid(id: UUID): User?
-    fun deleteByUuid(id: UUID): Boolean
+    fun findById(id: UUID): User?
+    fun deleteById(id: UUID): Void
 }
