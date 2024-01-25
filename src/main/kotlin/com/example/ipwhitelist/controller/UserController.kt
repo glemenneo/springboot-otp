@@ -18,7 +18,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 import java.util.UUID
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("api/v1/users")
 class UserController(private val userService: UserService) {
     @PostMapping
     fun createUser(@RequestBody createUserRequest: CreateUserRequest): ResponseEntity<UserResponse> {
