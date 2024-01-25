@@ -3,7 +3,6 @@ package com.example.ipwhitelist.service
 import com.example.ipwhitelist.model.CreateUserRequest
 import com.example.ipwhitelist.model.User
 import com.example.ipwhitelist.repository.UserRepository
-
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -19,7 +18,6 @@ class UserService(
 
         val userEntity = createUserRequest.toModel()
         return userRepository.save(userEntity)
-
     }
 
     fun findByEmail(email: String): User? {
