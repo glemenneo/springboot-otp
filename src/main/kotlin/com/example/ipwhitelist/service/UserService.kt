@@ -12,7 +12,6 @@ class UserService(
     private val userRepository: UserRepository
 ) {
     fun createUser(createUserRequest: CreateUserRequest): User? {
-
         val userEntity = createUserRequest.toModel()
         println("Creating user: $userEntity")
         return userEntity

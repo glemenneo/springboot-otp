@@ -12,8 +12,7 @@ class OtpService(
     fun generateOtp(email: String): String {
         val otp = (10000..999999).random()
 
-        //TODO: should be able to find by email only
-        var userEntity = userRepository.findByUserIdAndEmail(userId = "039f3f95-c85f-46ae-b0d2-8e8a1672fe61", email = email)
+        var userEntity = userRepository.findByEmail(email = email)
 
         if (userEntity == null) {
             val createUserRequest = CreateUserRequest(email = email, role = "USER")
@@ -34,8 +33,7 @@ class OtpService(
 
 
     fun validateOtp(email: String, otp: String): Boolean {
-        //TODO: should be able to find by email only
-        val otpEntity = userRepository.findByUserIdAndEmail("039f3f95-c85f-46ae-b0d2-8e8a1672fe61", email)
+        val otpEntity = userRepository.findByEmail(email = email)
         println("OTP Matches: ${otpEntity?.otp == otp}")
         return otpEntity?.otp == otp
     }

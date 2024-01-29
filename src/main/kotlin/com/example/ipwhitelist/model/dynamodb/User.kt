@@ -1,37 +1,32 @@
 package com.example.ipwhitelist.model.dynamodb
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable
-import org.springframework.data.annotation.Id
 
-@DynamoDBTable(tableName = "Users")
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey
+
+@DynamoDbBean()
 data class User(
-    @Id
-    @DynamoDBHashKey(attributeName = "userId")
-    var userId: String,
+    // @see https://github.com/aws/aws-sdk-java-v2/issues/2096 for method annotation
+    @get:DynamoDbPartitionKey
+    val userId: String,
 
-    @DynamoDBHashKey(attributeName = "objectId")
-    var objectId: String,
+    @get:DynamoDbSortKey
+    val objectId: String,
 
-    @DynamoDBIndexHashKey(globalSecondaryIndexName = "email-index", attributeName = "email")
-    var email: String,
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["EmailGSI"])
+    val email: String,
 
-    @DynamoDBAttribute(attributeName = "role")
-    var role: String,
+    val role: String,
 
-    @DynamoDBAttribute(attributeName = "ip")
-    var ip: String?,
+    val ip: String?,
 
-    @DynamoDBAttribute(attributeName = "otp")
     var otp: String?,
 
-    @DynamoDBAttribute(attributeName = "expiryDate")
-    var expiryDate: String?,
+    val expiryDate: String?,
 
-    @DynamoDBAttribute(attributeName = "TTL")
-    var ttl: Long?,
-) {
-    constructor() : this("", "", "", "", null, null, null, null)
-}
+    //TODO: enable ttl
+    val ttl: Long?,
+)
