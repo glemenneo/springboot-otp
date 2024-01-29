@@ -1,40 +1,47 @@
 package com.example.ipwhitelist.service
 
 import com.example.ipwhitelist.model.CreateUserRequest
-import com.example.ipwhitelist.model.User
+import com.example.ipwhitelist.model.dynamodb.User
 import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
+import java.time.Instant
+import java.util.*
 
 @Service
 class UserService(
     private val userRepository: UserRepository
 ) {
     fun createUser(createUserRequest: CreateUserRequest): User? {
-        val duplicate = userRepository.findByEmail(createUserRequest.email)
-        if (duplicate != null) {
-            return null
-        }
 
         val userEntity = createUserRequest.toModel()
-        return userRepository.save(userEntity)
+        println("Creating user: $userEntity")
+        return userEntity
     }
 
     fun findByEmail(email: String): User? {
         return userRepository.findByEmail(email)
     }
 
-    fun findById(id: UUID): User? {
-        return userRepository.findById(id)
+    fun findById(id: String): User? {
+        return userRepository.findUserByUserId(id)
     }
 
-    fun deleteById(id: UUID): Boolean {
+    fun deleteById(id: String): Boolean {
         this.findById(id) ?: return false
 
-        userRepository.deleteById(id)
+        userRepository.deleteByUserId(id)
         return true
     }
 
-    private fun CreateUserRequest.toModel() =
-        User(id = UUID.randomUUID(), name = this.name, email = this.email, role = this.role)
+    private fun CreateUserRequest.toModel() = User(
+        userId = UUID.randomUUID().toString(),
+        objectId = UUID.randomUUID().toString(),
+        email = this.email,
+        role = this.role,
+        ip = "",
+        otp = "",
+        expiryDate = Instant.ofEpochMilli(System.currentTimeMillis() + 30000L).toString(),
+        ttl = 30000L
+    )
+
 }

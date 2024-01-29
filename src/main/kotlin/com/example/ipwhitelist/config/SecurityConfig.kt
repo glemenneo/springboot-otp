@@ -29,14 +29,14 @@ class SecurityConfig(
     ): SecurityFilterChain {
         return http
             .csrf { it.disable() }
-            .authorizeHttpRequests{
+            .authorizeHttpRequests {
                 it
-                .requestMatchers("/api/auth/request-otp", "/api/auth/verify-otp")
-                .permitAll()
-                .requestMatchers("/api/admin/*")
-                .hasRole("Admin")
-                .anyRequest()
-                .authenticated()
+                    .requestMatchers("/api/v1/auth/request-otp", "/api/v1/auth/verify-otp")
+                    .permitAll()
+                    .requestMatchers("/api/v1/admin/*")
+                    .hasRole("Admin")
+                    .anyRequest()
+                    .authenticated()
             }
             .sessionManagement {
                 it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
