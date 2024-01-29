@@ -24,7 +24,7 @@ class UserRepository(
 
     fun findByEmail(email: String): User? {
         val userTable = getTable()
-        val emailGSI = userTable.index("EmailGsi")
+        val emailGSI = userTable.index("EmailGSI")
         val queryConditional = QueryConditional.keyEqualTo {
             it.partitionValue(email)
         }
