@@ -15,15 +15,12 @@ class OtpAuthProvider(
     val otpService: OtpService
 ) : AuthenticationProvider {
     override fun authenticate(authentication: Authentication): Authentication {
-        if (authentication !is OtpAuthToken) {
-            throw IllegalArgumentException("Invalid authentication token.")
-        }
+        require(authentication is OtpAuthToken) { "Invalid authentication token." }
 
         val email = authentication.principal
         val otp = authentication.credentials
-        val userAgent = authentication.userAgent
 
-        val isValid = otpService.validateOtp(userAgent, email, otp)
+        val isValid = otpService.validateOtp(email, otp)
         if (!isValid) {
             throw BadCredentialsException("Invalid OTP.")
         }

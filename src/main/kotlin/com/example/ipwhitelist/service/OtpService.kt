@@ -1,25 +1,42 @@
 package com.example.ipwhitelist.service
 
-import com.example.ipwhitelist.model.Otp
-import com.example.ipwhitelist.repository.OtpRepository
+import com.example.ipwhitelist.model.CreateUserRequest
+import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 @Service
 class OtpService(
-    private val otpRepository: OtpRepository,
+    private val userRepository: UserRepository,
+    private val userService: UserService
 ) {
-    private final val OTP_EXPIRATION = 60 * 5L
-
-    fun generateOtp(userAgent: String, email: String): Otp {
+    fun generateOtp(email: String): String {
         val otp = (10000..999999).random()
-        val otpEntity = Otp(UUID.randomUUID(), email, userAgent, otp.toString(), OTP_EXPIRATION)
-        otpRepository.save(otpEntity)
-        return otpEntity
+
+        //TODO: should be able to find by email only
+        var userEntity = userRepository.findByUserIdAndEmail(userId = "039f3f95-c85f-46ae-b0d2-8e8a1672fe61", email = email)
+
+        if (userEntity == null) {
+            val createUserRequest = CreateUserRequest(email = email, role = "USER")
+            userEntity = userService.createUser(createUserRequest)
+
+            if (userEntity == null) {
+                throw RuntimeException("Failed to generate OTP")
+            }
+        } else {
+            throw RuntimeException("User already exists!")
+        }
+
+        userEntity.otp = otp.toString()
+        userRepository.save(userEntity)
+
+        return otp.toString()
     }
 
-    fun validateOtp(userAgent: String, email: String, otp: String): Boolean {
-        val otpEntity = otpRepository.findByEmailAndUserAgent(email, userAgent)
+
+    fun validateOtp(email: String, otp: String): Boolean {
+        //TODO: should be able to find by email only
+        val otpEntity = userRepository.findByUserIdAndEmail("039f3f95-c85f-46ae-b0d2-8e8a1672fe61", email)
+        println("OTP Matches: ${otpEntity?.otp == otp}")
         return otpEntity?.otp == otp
     }
 }

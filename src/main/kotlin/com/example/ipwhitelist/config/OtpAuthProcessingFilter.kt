@@ -22,7 +22,6 @@ class OtpAuthProcessingFilter
     }
 
     override fun attemptAuthentication(request: HttpServletRequest, response: HttpServletResponse): Authentication {
-        val userAgent = request.getHeader("User-Agent")
         val body = request.reader.use { it.readText() }
         val verifyOtpRequest: VerifyOtpRequest? = jacksonObjectMapper().readValue(body, VerifyOtpRequest::class.java)
 
@@ -33,7 +32,7 @@ class OtpAuthProcessingFilter
             throw BadCredentialsException("Authentication details not present!")
         }
 
-        val authentication = OtpAuthToken(email, otp, userAgent)
+        val authentication = OtpAuthToken(email, otp)
         return this.authenticationManager.authenticate(authentication)
     }
 }
