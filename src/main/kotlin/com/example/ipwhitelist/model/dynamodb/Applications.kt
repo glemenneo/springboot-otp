@@ -12,7 +12,7 @@ data class Applications(
     val appId: String,
 
     @get:DynamoDbSortKey
-    @get:DynamoDbSecondaryPartitionKey(indexNames = ["EmailGSI"])
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["UserGSI"])
     val objectId: String,
 
     val name: String,
