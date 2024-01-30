@@ -1,11 +1,11 @@
 package com.example.ipwhitelist.service
 
 import com.example.ipwhitelist.model.CreateUserRequest
+import com.example.ipwhitelist.model.dynamodb.DataClassMappings
 import com.example.ipwhitelist.model.dynamodb.User
 import com.example.ipwhitelist.model.dynamodb.UserPrincipal
 import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
-import java.time.Instant
 import java.util.*
 
 @Service
@@ -20,7 +20,7 @@ class UserService(
     }
 
     fun findByEmail(email: String): UserPrincipal? {
-        return userRepository.findByEmail(email)
+        return userRepository.findUserPrincipalByEmail(email)
     }
 
     fun findById(id: String): User? {
@@ -36,7 +36,7 @@ class UserService(
 
     private fun CreateUserRequest.toModel() = UserPrincipal(
         userId = UUID.randomUUID().toString(),
-        objectId = UUID.randomUUID().toString(),
+        objectId = DataClassMappings.USER_PRINCIPAL_PREFIX+ UUID.randomUUID().toString(),
         email = this.email,
         role = "USER"
     )

@@ -11,6 +11,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Key
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema
 import software.amazon.awssdk.enhanced.dynamodb.model.Page
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest
 
 @Repository
@@ -23,7 +24,7 @@ class UserRepository(
         return user
     }
 
-    fun findByEmail(email: String): UserPrincipal? {
+    fun findUserPrincipalByEmail(email: String): UserPrincipal? {
         val userTable = getTable(UserPrincipal::class.java)
         val emailGSI = userTable.index("EmailGSI")
         val queryConditional = QueryConditional.keyEqualTo {
@@ -38,17 +39,19 @@ class UserRepository(
     }
 
     fun findUserOtpByEmail(email: String): UserOtp? {
-        val userTable = getTable(UserOtp::class.java)
-        val emailGSI = userTable.index("EmailGSI")
-        val queryConditional = QueryConditional.keyEqualTo {
-            it.partitionValue(email)
-        }
-        val usersWithEmail: SdkIterable<Page<UserOtp>>? = emailGSI.query(
-            QueryEnhancedRequest.builder()
-                .queryConditional(queryConditional)
+        val userPrincipal = findUserPrincipalByEmail(email)
+        val userId = userPrincipal?.userId
+
+        val userOtpTable = getTable(UserOtp::class.java)
+        val queryConditional = sortBeginsWith(
+            Key.builder()
+                .partitionValue(userId)
+                .sortValue("otp")
                 .build()
         )
-        return usersWithEmail?.firstOrNull()?.items()?.firstOrNull()
+
+        return userOtpTable.query(queryConditional).items().firstOrNull()
+            ?: throw NoSuchElementException("No UserOtp found for email: $email")
     }
 
     fun findUserByUserId(userId: String): User? {

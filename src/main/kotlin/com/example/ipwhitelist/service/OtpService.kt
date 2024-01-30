@@ -17,7 +17,7 @@ class OtpService(
         val otp = (10000..999999).random()
 
         // Check if the user already exists
-        var userEntity = userRepository.findByEmail(email)
+        var userEntity = userRepository.findUserPrincipalByEmail(email)
 
         if (userEntity == null) {
             val createUserRequest = CreateUserRequest(email = email, role = "USER")
