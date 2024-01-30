@@ -3,6 +3,7 @@ package com.example.ipwhitelist.controller
 import com.example.ipwhitelist.model.CreateUserRequest
 import com.example.ipwhitelist.model.UserResponse
 import com.example.ipwhitelist.model.dynamodb.User
+import com.example.ipwhitelist.model.dynamodb.UserPrincipal
 import com.example.ipwhitelist.service.UserService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -38,9 +39,12 @@ class UserController(private val userService: UserService) {
         else throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found!")
     }
 
-    private fun User.toResponse() = UserResponse(
-        id = this.userId,
-        email = this.email,
-        role = this.role,
-    )
+    private fun User.toResponse() = when (this) {
+        is UserPrincipal -> UserResponse(
+            id = this.userId,
+            email = this.email,
+            role = this.role
+        )
+        else -> throw IllegalArgumentException("Unexpected type of User: $this")
+    }
 }

@@ -1,6 +1,9 @@
 package com.example.ipwhitelist.repository
 
+import com.example.ipwhitelist.model.dynamodb.DataClassMappings
 import com.example.ipwhitelist.model.dynamodb.User
+import com.example.ipwhitelist.model.dynamodb.UserOtp
+import com.example.ipwhitelist.model.dynamodb.UserPrincipal
 import org.springframework.stereotype.Repository
 import software.amazon.awssdk.core.pagination.sync.SdkIterable
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
@@ -9,34 +12,51 @@ import software.amazon.awssdk.enhanced.dynamodb.Key
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema
 import software.amazon.awssdk.enhanced.dynamodb.model.Page
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest
 
 @Repository
 class UserRepository(
     val dynamoDbEnhancedClient: DynamoDbEnhancedClient
 ) {
-    fun save(user: User): User {
-        val userTable = getTable()
+    fun <T : User> save(user: T): T {
+        val userTable = getTable(user.javaClass)
         userTable.putItem(user)
         return user
     }
 
-    fun findByEmail(email: String): User? {
-        val userTable = getTable()
+    fun findUserPrincipalByEmail(email: String): UserPrincipal? {
+        val userTable = getTable(UserPrincipal::class.java)
         val emailGSI = userTable.index("EmailGSI")
         val queryConditional = QueryConditional.keyEqualTo {
             it.partitionValue(email)
         }
-        val usersWithEmail: SdkIterable<Page<User>> = emailGSI.query(
+        val usersWithEmail: SdkIterable<Page<UserPrincipal>>? = emailGSI.query(
             QueryEnhancedRequest.builder()
                 .queryConditional(queryConditional)
                 .build()
         )
-        return usersWithEmail.firstOrNull()?.items()?.firstOrNull()
+        return usersWithEmail?.firstOrNull()?.items()?.firstOrNull()
+    }
+
+    fun findUserOtpByEmail(email: String): UserOtp? {
+        val userPrincipal = findUserPrincipalByEmail(email)
+        val userId = userPrincipal?.userId
+
+        val userOtpTable = getTable(UserOtp::class.java)
+        val queryConditional = sortBeginsWith(
+            Key.builder()
+                .partitionValue(userId)
+                .sortValue(DataClassMappings.USER_OTP_PREFIX)
+                .build()
+        )
+
+        return userOtpTable.query(queryConditional).items().firstOrNull()
+            ?: throw NoSuchElementException("No UserOtp found for email: $email")
     }
 
     fun findUserByUserId(userId: String): User? {
-        val userTable = getTable()
+        val userTable = getTable(User::class.java)
         return userTable.getItem(
             Key.builder()
                 .partitionValue(userId)
@@ -45,7 +65,7 @@ class UserRepository(
     }
 
     fun deleteByUserId(userId: String) {
-        val userTable = getTable()
+        val userTable = getTable(User::class.java)
         userTable.deleteItem(
             Key.builder()
                 .partitionValue(userId)
@@ -53,7 +73,7 @@ class UserRepository(
         )
     }
 
-    private fun getTable(): DynamoDbTable<User> {
-        return dynamoDbEnhancedClient.table("Users", TableSchema.fromBean(User::class.java))
+    private fun <T : User> getTable(clazz: Class<T>): DynamoDbTable<T> {
+        return dynamoDbEnhancedClient.table("Users", TableSchema.fromBean(clazz))
     }
 }

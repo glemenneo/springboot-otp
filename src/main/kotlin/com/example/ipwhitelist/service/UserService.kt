@@ -1,24 +1,26 @@
 package com.example.ipwhitelist.service
 
 import com.example.ipwhitelist.model.CreateUserRequest
+import com.example.ipwhitelist.model.dynamodb.DataClassMappings
 import com.example.ipwhitelist.model.dynamodb.User
+import com.example.ipwhitelist.model.dynamodb.UserPrincipal
 import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
-import java.time.Instant
 import java.util.*
 
 @Service
 class UserService(
     private val userRepository: UserRepository
 ) {
-    fun createUser(createUserRequest: CreateUserRequest): User? {
+    fun createUser(createUserRequest: CreateUserRequest): UserPrincipal? {
         val userEntity = createUserRequest.toModel()
         println("Creating user: $userEntity")
+        userRepository.save(userEntity)
         return userEntity
     }
 
-    fun findByEmail(email: String): User? {
-        return userRepository.findByEmail(email)
+    fun findByEmail(email: String): UserPrincipal? {
+        return userRepository.findUserPrincipalByEmail(email)
     }
 
     fun findById(id: String): User? {
@@ -32,15 +34,11 @@ class UserService(
         return true
     }
 
-    private fun CreateUserRequest.toModel() = User(
+    private fun CreateUserRequest.toModel() = UserPrincipal(
         userId = UUID.randomUUID().toString(),
-        objectId = UUID.randomUUID().toString(),
+        objectId = DataClassMappings.USER_PRINCIPAL_PREFIX+ UUID.randomUUID().toString(),
         email = this.email,
-        role = this.role,
-        ip = "",
-        otp = "",
-        expiryDate = Instant.ofEpochMilli(System.currentTimeMillis() + 30000L).toString(),
-        ttl = 30000L
+        role = "USER"
     )
 
 }
