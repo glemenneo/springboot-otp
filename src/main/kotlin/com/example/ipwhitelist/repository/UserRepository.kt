@@ -1,5 +1,6 @@
 package com.example.ipwhitelist.repository
 
+import com.example.ipwhitelist.model.dynamodb.DataClassMappings
 import com.example.ipwhitelist.model.dynamodb.User
 import com.example.ipwhitelist.model.dynamodb.UserOtp
 import com.example.ipwhitelist.model.dynamodb.UserPrincipal
@@ -46,7 +47,7 @@ class UserRepository(
         val queryConditional = sortBeginsWith(
             Key.builder()
                 .partitionValue(userId)
-                .sortValue("otp")
+                .sortValue(DataClassMappings.USER_OTP_PREFIX)
                 .build()
         )
 
