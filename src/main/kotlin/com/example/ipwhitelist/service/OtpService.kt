@@ -1,8 +1,12 @@
 package com.example.ipwhitelist.service
 
 import com.example.ipwhitelist.model.CreateUserRequest
+import com.example.ipwhitelist.model.dynamodb.DataClassMappings
+import com.example.ipwhitelist.model.dynamodb.UserOtp
 import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
+import java.time.Instant
+import java.util.*
 
 @Service
 class OtpService(
@@ -12,8 +16,8 @@ class OtpService(
     fun generateOtp(email: String): String {
         val otp = (10000..999999).random()
 
-        //TODO: should be able to find by email only
-        var userEntity = userRepository.findByUserIdAndEmail(userId = "039f3f95-c85f-46ae-b0d2-8e8a1672fe61", email = email)
+        // Check if the user already exists
+        var userEntity = userRepository.findUserPrincipalByEmail(email)
 
         if (userEntity == null) {
             val createUserRequest = CreateUserRequest(email = email, role = "USER")
@@ -26,16 +30,20 @@ class OtpService(
             throw RuntimeException("User already exists!")
         }
 
-        userEntity.otp = otp.toString()
-        userRepository.save(userEntity)
+        val userOtp = UserOtp(
+            userId = userEntity.userId,
+            objectId = DataClassMappings.USER_OTP_PREFIX + UUID.randomUUID().toString(),
+            otp = otp.toString(),
+            expiryDate = Instant.ofEpochMilli(System.currentTimeMillis() + 300000).toString(),
+            ttl = 300000
+        )
+        userRepository.save(userOtp)
 
         return otp.toString()
     }
 
-
     fun validateOtp(email: String, otp: String): Boolean {
-        //TODO: should be able to find by email only
-        val otpEntity = userRepository.findByUserIdAndEmail("039f3f95-c85f-46ae-b0d2-8e8a1672fe61", email)
+        val otpEntity = userRepository.findUserOtpByEmail(email = email)
         println("OTP Matches: ${otpEntity?.otp == otp}")
         return otpEntity?.otp == otp
     }

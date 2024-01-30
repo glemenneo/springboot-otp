@@ -1,37 +1,84 @@
 package com.example.ipwhitelist.model.dynamodb
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable
-import org.springframework.data.annotation.Id
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey
 
-@DynamoDBTable(tableName = "Users")
-data class User(
-    @Id
-    @DynamoDBHashKey(attributeName = "userId")
-    var userId: String,
+object DataClassMappings {
+    const val USER_PRINCIPAL_PREFIX = "user@"
+    const val USER_LOCATION_PREFIX = "location@"
+    const val USER_IP_PREFIX = "ip@"
+    const val USER_OTP_PREFIX = "otp@"
+}
 
-    @DynamoDBHashKey(attributeName = "objectId")
-    var objectId: String,
+@DynamoDbBean
+open class User(
+    @get:DynamoDbPartitionKey
+    open var userId: String,
 
-    @DynamoDBIndexHashKey(globalSecondaryIndexName = "email-index", attributeName = "email")
+    @get:DynamoDbSortKey
+    open var objectId: String
+)
+
+@DynamoDbBean
+data class UserPrincipal(
+    @get:DynamoDbPartitionKey
+    override var userId: String,
+
+    @get:DynamoDbSortKey
+    override var objectId: String,
+
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["EmailGSI"])
     var email: String,
 
-    @DynamoDBAttribute(attributeName = "role")
-    var role: String,
+    var role: String
+) : User(userId, DataClassMappings.USER_PRINCIPAL_PREFIX + objectId) {
+    constructor() : this("", "", "", "")
+}
 
-    @DynamoDBAttribute(attributeName = "ip")
+@DynamoDbBean
+data class UserLocation(
+    @get:DynamoDbPartitionKey
+    override var userId: String,
+
+    @get:DynamoDbSortKey
+    override var objectId: String,
+
+    var location: String?
+) : User(userId, DataClassMappings.USER_LOCATION_PREFIX + objectId) {
+    constructor() : this("", "", "")
+}
+
+@DynamoDbBean
+data class UserIp(
+    @get:DynamoDbPartitionKey
+    override var userId: String,
+
+    @get:DynamoDbSortKey
+    override var objectId: String,
+
     var ip: String?,
 
-    @DynamoDBAttribute(attributeName = "otp")
+    var ttl: Long?
+) : User(userId, DataClassMappings.USER_IP_PREFIX + objectId) {
+    constructor() : this("", "", "", null)
+}
+
+@DynamoDbBean
+data class UserOtp(
+    @get:DynamoDbPartitionKey
+    override var userId: String,
+
+    @get:DynamoDbSortKey
+    override var objectId: String,
+
     var otp: String?,
 
-    @DynamoDBAttribute(attributeName = "expiryDate")
     var expiryDate: String?,
 
-    @DynamoDBAttribute(attributeName = "TTL")
-    var ttl: Long?,
-) {
-    constructor() : this("", "", "", "", null, null, null, null)
+    var ttl: Long?
+) : User(userId, DataClassMappings.USER_OTP_PREFIX + objectId) {
+    constructor() : this("", "", "", "", null)
 }
+
