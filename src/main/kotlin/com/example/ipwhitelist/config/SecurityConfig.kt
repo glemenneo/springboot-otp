@@ -33,6 +33,10 @@ class SecurityConfig(
                 it
                     .requestMatchers("/api/v1/auth/request-otp", "/api/v1/auth/verify-otp")
                     .permitAll()
+                    .requestMatchers("/api/v1/users/**")
+                    .permitAll()
+                    .requestMatchers("/api/v1/apps/**")
+                    .permitAll()
                     .requestMatchers("/api/v1/admin/*")
                     .hasRole("Admin")
                     .anyRequest()

@@ -38,7 +38,7 @@ class UserService(
         userId = UUID.randomUUID().toString(),
         objectId = DataClassMappings.USER_PRINCIPAL_PREFIX+ UUID.randomUUID().toString(),
         email = this.email,
-        role = "USER"
+        role = this.role
     )
 
 }

@@ -13,13 +13,16 @@ object DataClassMappings {
 }
 
 @DynamoDbBean
-open class User(
+abstract class User(
     @get:DynamoDbPartitionKey
     open var userId: String,
 
     @get:DynamoDbSortKey
     open var objectId: String
-)
+) {
+    constructor() : this("", "")
+}
+
 
 @DynamoDbBean
 data class UserPrincipal(
