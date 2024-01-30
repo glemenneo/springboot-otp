@@ -1,7 +1,6 @@
 package com.example.ipwhitelist.model.dynamodb
 
 
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey
@@ -11,22 +10,25 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortK
 data class User(
     // @see https://github.com/aws/aws-sdk-java-v2/issues/2096 for method annotation
     @get:DynamoDbPartitionKey
-    val userId: String,
+    var userId: String,
 
     @get:DynamoDbSortKey
-    val objectId: String,
+    var objectId: String,
 
     @get:DynamoDbSecondaryPartitionKey(indexNames = ["EmailGSI"])
-    val email: String,
+    var email: String,
 
-    val role: String,
+    var role: String,
 
-    val ip: String?,
+    var ip: String?,
 
     var otp: String?,
 
-    val expiryDate: String?,
+    var expiryDate: String?,
 
     //TODO: enable ttl
-    val ttl: Long?,
-)
+    var ttl: Long?,
+
+) {
+    constructor() : this("", "", "", "", null, null, null, null)
+}
