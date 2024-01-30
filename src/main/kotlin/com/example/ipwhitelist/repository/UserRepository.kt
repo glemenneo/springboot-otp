@@ -1,9 +1,6 @@
 package com.example.ipwhitelist.repository
 
-import com.example.ipwhitelist.model.dynamodb.DataClassMappings
-import com.example.ipwhitelist.model.dynamodb.User
-import com.example.ipwhitelist.model.dynamodb.UserOtp
-import com.example.ipwhitelist.model.dynamodb.UserPrincipal
+import com.example.ipwhitelist.model.dynamodb.*
 import org.springframework.stereotype.Repository
 import software.amazon.awssdk.core.pagination.sync.SdkIterable
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
@@ -14,6 +11,8 @@ import software.amazon.awssdk.enhanced.dynamodb.model.Page
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest
+import java.time.Instant
+import java.util.Date
 
 @Repository
 class UserRepository(
@@ -40,26 +39,30 @@ class UserRepository(
     }
 
     fun findUserOtpByEmail(email: String): UserOtp? {
-        val userPrincipal = findUserPrincipalByEmail(email)
-        val userId = userPrincipal?.userId
+        val userId = findUserPrincipalByEmail(email)?.userId
+            ?: return null
 
         val userOtpTable = getTable(UserOtp::class.java)
         val queryConditional = sortBeginsWith(
             Key.builder()
                 .partitionValue(userId)
-                .sortValue(DataClassMappings.USER_OTP_PREFIX)
+                .sortValue(UserTableKeyPrefix.OTP.prefix)
                 .build()
         )
 
-        return userOtpTable.query(queryConditional).items().firstOrNull()
-            ?: throw NoSuchElementException("No UserOtp found for email: $email")
+        return userOtpTable
+            .query(queryConditional)
+            .items().firstOrNull {
+                it.expiryDate > Instant.now().toString()
+            }
     }
 
-    fun findUserByUserId(userId: String): User? {
-        val userTable = getTable(User::class.java)
+    fun findUserPrincipalByUserId(userId: String): UserPrincipal? {
+        val userTable = getTable(UserPrincipal::class.java)
         return userTable.getItem(
             Key.builder()
                 .partitionValue(userId)
+                .sortValue(userId)
                 .build()
         )
     }

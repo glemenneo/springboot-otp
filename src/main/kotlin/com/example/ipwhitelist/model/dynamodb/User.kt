@@ -5,21 +5,23 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey
 
-object DataClassMappings {
-    const val USER_PRINCIPAL_PREFIX = "user@"
-    const val USER_LOCATION_PREFIX = "location@"
-    const val USER_IP_PREFIX = "ip@"
-    const val USER_OTP_PREFIX = "otp@"
+enum class UserTableKeyPrefix(val prefix: String) {
+    USER("USER-"),
+    OTP("OTP-"),
+    LOCATION("LOCATION-"),
+    IP("IP-")
 }
 
 @DynamoDbBean
-open class User(
+abstract class User(
     @get:DynamoDbPartitionKey
     open var userId: String,
 
     @get:DynamoDbSortKey
     open var objectId: String
-)
+) {
+    constructor() : this("", "")
+}
 
 @DynamoDbBean
 data class UserPrincipal(
@@ -33,7 +35,9 @@ data class UserPrincipal(
     var email: String,
 
     var role: String
-) : User(userId, DataClassMappings.USER_PRINCIPAL_PREFIX + objectId) {
+) : User(userId = "${UserTableKeyPrefix.USER.prefix}$userId",
+    objectId = "${UserTableKeyPrefix.USER.prefix}$objectId"
+) {
     constructor() : this("", "", "", "")
 }
 
@@ -45,8 +49,11 @@ data class UserLocation(
     @get:DynamoDbSortKey
     override var objectId: String,
 
-    var location: String?
-) : User(userId, DataClassMappings.USER_LOCATION_PREFIX + objectId) {
+    var location: String
+) : User(
+    userId = "${UserTableKeyPrefix.USER.prefix}$userId",
+    objectId = "${UserTableKeyPrefix.LOCATION.prefix}$objectId"
+) {
     constructor() : this("", "", "")
 }
 
@@ -58,11 +65,13 @@ data class UserIp(
     @get:DynamoDbSortKey
     override var objectId: String,
 
-    var ip: String?,
+    var ip: String,
 
-    var ttl: Long?
-) : User(userId, DataClassMappings.USER_IP_PREFIX + objectId) {
-    constructor() : this("", "", "", null)
+    var ttl: Long
+) : User(userId = "${UserTableKeyPrefix.USER.prefix}$userId",
+    objectId = "${UserTableKeyPrefix.IP.prefix}$objectId"
+) {
+    constructor() : this("", "", "", 0)
 }
 
 @DynamoDbBean
@@ -73,12 +82,15 @@ data class UserOtp(
     @get:DynamoDbSortKey
     override var objectId: String,
 
-    var otp: String?,
+    var otp: String,
 
-    var expiryDate: String?,
+    var expiryDate: String,
 
-    var ttl: Long?
-) : User(userId, DataClassMappings.USER_OTP_PREFIX + objectId) {
-    constructor() : this("", "", "", "", null)
+    var ttl: Long
+) : User(userId = "${UserTableKeyPrefix.USER.prefix}$userId",
+    objectId = "${UserTableKeyPrefix.OTP.prefix}$objectId"
+) {
+    constructor() : this("", "", "", "", 0)
 }
+
 

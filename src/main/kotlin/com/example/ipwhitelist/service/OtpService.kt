@@ -1,8 +1,8 @@
 package com.example.ipwhitelist.service
 
 import com.example.ipwhitelist.model.CreateUserRequest
-import com.example.ipwhitelist.model.dynamodb.DataClassMappings
 import com.example.ipwhitelist.model.dynamodb.UserOtp
+import com.example.ipwhitelist.model.dynamodb.UserTableKeyPrefix
 import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
 import java.time.Instant
@@ -14,37 +14,31 @@ class OtpService(
     private val userService: UserService
 ) {
     fun generateOtp(email: String): String {
-        val otp = (10000..999999).random()
+        val otp = (10000..999999).random().toString()
 
-        // Check if the user already exists
-        var userEntity = userRepository.findUserPrincipalByEmail(email)
-
-        if (userEntity == null) {
+        var userId = userRepository.findUserPrincipalByEmail(email)?.userId
+        if (userId == null) {
             val createUserRequest = CreateUserRequest(email = email, role = "USER")
-            userEntity = userService.createUser(createUserRequest)
-
-            if (userEntity == null) {
-                throw RuntimeException("Failed to generate OTP")
-            }
-        } else {
-            throw RuntimeException("User already exists!")
+            val id = userService.createUser(createUserRequest)?.id
+                ?: throw RuntimeException("Failed to generate OTP")
+            userId = "${UserTableKeyPrefix.USER.prefix}$id"
         }
 
         val userOtp = UserOtp(
-            userId = userEntity.userId,
-            objectId = DataClassMappings.USER_OTP_PREFIX + UUID.randomUUID().toString(),
-            otp = otp.toString(),
+            userId = userId,
+            objectId = "${UserTableKeyPrefix.OTP.prefix}${UUID.randomUUID()}",
+            otp = otp,
             expiryDate = Instant.ofEpochMilli(System.currentTimeMillis() + 300000).toString(),
             ttl = 300000
         )
         userRepository.save(userOtp)
 
-        return otp.toString()
+        return otp
     }
 
     fun validateOtp(email: String, otp: String): Boolean {
-        val otpEntity = userRepository.findUserOtpByEmail(email = email)
-        println("OTP Matches: ${otpEntity?.otp == otp}")
-        return otpEntity?.otp == otp
+        val userOtp = userRepository.findUserOtpByEmail(email = email)
+        println("OTP Matches: ${userOtp?.otp == otp}")
+        return userOtp?.otp == otp
     }
 }
