@@ -11,8 +11,8 @@ import software.amazon.awssdk.enhanced.dynamodb.model.Page
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest
+import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch
 import java.time.Instant
-import java.util.Date
 
 @Repository
 class UserRepository(
@@ -68,12 +68,73 @@ class UserRepository(
     }
 
     fun deleteByUserId(userId: String) {
-        val userTable = getTable(User::class.java)
-        userTable.deleteItem(
+        val userPrincipalTable = getTable(UserPrincipal::class.java)
+        val userOtpTable = getTable(UserOtp::class.java)
+        val userLocationTable = getTable(UserLocation::class.java)
+        val userIpTable = getTable(UserIp::class.java)
+
+        userPrincipalTable.deleteItem(
             Key.builder()
                 .partitionValue(userId)
+                .sortValue(userId)
                 .build()
         )
+
+        val userOtpWriteBatch = WriteBatch.builder(UserOtp::class.java)
+        userOtpTable.query(
+            sortBeginsWith(
+                Key.builder()
+                    .partitionValue(userId)
+                    .sortValue(UserTableKeyPrefix.OTP.prefix)
+                    .build()
+            )
+        )
+            .items()
+            .forEach { userOtpWriteBatch.addDeleteItem(it) }
+
+        val userLocationWriteBatch = WriteBatch.builder(UserLocation::class.java)
+        userLocationTable.query(
+            sortBeginsWith(
+                Key.builder()
+                    .partitionValue(userId)
+                    .sortValue(UserTableKeyPrefix.LOCATION.prefix)
+                    .build()
+            )
+        )
+            .items()
+            .forEach { userLocationWriteBatch.addDeleteItem(it) }
+
+        val userIpWriteBatch = WriteBatch.builder(UserIp::class.java)
+        userIpTable.query(
+            sortBeginsWith(
+                Key.builder()
+                    .partitionValue(userId)
+                    .sortValue(UserTableKeyPrefix.IP.prefix)
+                    .build()
+            )
+        )
+            .items()
+            .forEach { userIpWriteBatch.addDeleteItem(it) }
+
+        val batchWriteResult = dynamoDbEnhancedClient.batchWriteItem {
+            it.writeBatches(
+                userOtpWriteBatch.build(),
+                userLocationWriteBatch.build(),
+                userIpWriteBatch.build()
+            )
+        }
+
+        for (key in batchWriteResult.unprocessedDeleteItemsForTable(userOtpTable)) {
+            println(key)
+        }
+
+        for (key in batchWriteResult.unprocessedDeleteItemsForTable(userLocationTable)) {
+            println(key)
+        }
+
+        for (key in batchWriteResult.unprocessedDeleteItemsForTable(userIpTable)) {
+            println(key)
+        }
     }
 
     private fun <T : User> getTable(clazz: Class<T>): DynamoDbTable<T> {
