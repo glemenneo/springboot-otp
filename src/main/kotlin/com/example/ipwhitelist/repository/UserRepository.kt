@@ -10,7 +10,6 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema
 import software.amazon.awssdk.enhanced.dynamodb.model.Page
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest
-import javax.management.Query
 
 @Repository
 class UserRepository(
@@ -55,6 +54,6 @@ class UserRepository(
     }
 
     private fun getTable(): DynamoDbTable<User> {
-        return dynamoDbEnhancedClient.table("User", TableSchema.fromBean(User::class.java))
+        return dynamoDbEnhancedClient.table("Users", TableSchema.fromBean(User::class.java))
     }
 }
