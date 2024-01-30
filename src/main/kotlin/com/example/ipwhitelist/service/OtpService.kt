@@ -1,8 +1,8 @@
 package com.example.ipwhitelist.service
 
 import com.example.ipwhitelist.model.CreateUserRequest
+import com.example.ipwhitelist.model.dynamodb.DataClassMappings
 import com.example.ipwhitelist.model.dynamodb.UserOtp
-import com.example.ipwhitelist.model.dynamodb.UserPrincipal
 import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
 import java.time.Instant
@@ -21,7 +21,7 @@ class OtpService(
 
         if (userEntity == null) {
             val createUserRequest = CreateUserRequest(email = email, role = "USER")
-            userEntity = userService.createUser(createUserRequest) as UserPrincipal?
+            userEntity = userService.createUser(createUserRequest)
 
             if (userEntity == null) {
                 throw RuntimeException("Failed to generate OTP")
@@ -32,7 +32,7 @@ class OtpService(
 
         val userOtp = UserOtp(
             userId = userEntity.userId,
-            objectId = UUID.randomUUID().toString(),
+            objectId = DataClassMappings.USER_OTP_PREFIX + UUID.randomUUID().toString(),
             otp = otp.toString(),
             expiryDate = Instant.ofEpochMilli(System.currentTimeMillis() + 300000).toString(),
             ttl = 300000
