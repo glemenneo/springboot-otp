@@ -4,9 +4,9 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey
 
-object ApplicationClassMappings {
-    const val APP_INFO_PREFIX = "app@"
-    const val APP_USER_PREFIX = "user@"
+enum class AppTableKeyPrefix(val prefix: String) {
+    APP("APP-"),
+    USER("USER-"),
 }
 @DynamoDbBean
 open class Application(
@@ -31,7 +31,7 @@ data class ApplicationDetails(
     var changeToken: String,
     var ipSetId: String,
 
-) : Application(appId, ApplicationClassMappings.APP_INFO_PREFIX + objectId) {
+) : Application(appId, AppTableKeyPrefix.APP.prefix + objectId) {
     constructor() : this("", "", "", "", "", "", "")
 }
 
@@ -45,6 +45,6 @@ data class ApplicationUser(
 
     var role: String,
 
-) : Application(appId, ApplicationClassMappings.APP_USER_PREFIX + objectId) {
+) : Application(appId, AppTableKeyPrefix.USER.prefix + objectId) {
     constructor() : this("", "", "")
 }

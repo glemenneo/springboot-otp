@@ -1,7 +1,7 @@
 package com.example.ipwhitelist.repository
 
 import com.example.ipwhitelist.model.dynamodb.Application
-import com.example.ipwhitelist.model.dynamodb.ApplicationClassMappings
+import com.example.ipwhitelist.model.dynamodb.AppTableKeyPrefix
 import com.example.ipwhitelist.model.dynamodb.ApplicationDetails
 import com.example.ipwhitelist.model.dynamodb.ApplicationUser
 import org.springframework.stereotype.Repository
@@ -34,7 +34,7 @@ class AppRepository(
                     .expression("begins_with(objectId, :prefix)")
                     .expressionValues(Collections.singletonMap(
                         ":prefix", AttributeValue.builder()
-                            .s(ApplicationClassMappings.APP_INFO_PREFIX).build()))
+                            .s(AppTableKeyPrefix.APP.prefix).build()))
                     .build()
             )
             .build()
@@ -53,7 +53,7 @@ class AppRepository(
         val queryConditional = sortBeginsWith(
             Key.builder()
                 .partitionValue(appId)
-                .sortValue(ApplicationClassMappings.APP_INFO_PREFIX)
+                .sortValue(AppTableKeyPrefix.APP.prefix)
                 .build()
         )
 
@@ -70,7 +70,7 @@ class AppRepository(
             sortBeginsWith(
                 Key.builder()
                     .partitionValue(appIp)
-                    .sortValue(ApplicationClassMappings.APP_INFO_PREFIX)
+                    .sortValue(AppTableKeyPrefix.APP.prefix)
                     .build()
             )
         ).items()
@@ -80,7 +80,7 @@ class AppRepository(
             sortBeginsWith(
                 Key.builder()
                     .partitionValue(appIp)
-                    .sortValue(ApplicationClassMappings.APP_USER_PREFIX)
+                    .sortValue(AppTableKeyPrefix.USER.prefix)
                     .build()
             )
         ).items()
@@ -93,8 +93,8 @@ class AppRepository(
         val userToDelete = appUsersTable.query(
             sortBeginsWith(
                 Key.builder()
-                    .partitionValue(appId)
-                    .sortValue(ApplicationClassMappings.APP_USER_PREFIX + userId)
+                    .partitionValue(AppTableKeyPrefix.APP.prefix + appId)
+                    .sortValue(AppTableKeyPrefix.USER.prefix + userId)
                     .build()
             )
         ).items().firstOrNull()
