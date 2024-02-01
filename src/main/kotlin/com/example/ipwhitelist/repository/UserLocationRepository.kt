@@ -28,7 +28,7 @@ class UserLocationRepository(
             .getItem(
                 Key.builder()
                     .partitionValue(userKey)
-                    .sortValue("${UserTableKeyPrefix.IP.prefix}${locationKey.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}")
+                    .sortValue(locationKey.toIpKey())
                     .build()
             )
     }
@@ -93,7 +93,7 @@ class UserLocationRepository(
             userIpReadBatch.addGetItem(
                 Key.builder()
                     .partitionValue(userKey)
-                    .sortValue("${UserTableKeyPrefix.IP.prefix}${it.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}")
+                    .sortValue(it.toIpKey())
                     .build()
             )
         }
@@ -108,7 +108,6 @@ class UserLocationRepository(
     }
 
     fun deleteByLocationId(userKey: String, locationKey: String): Boolean {
-        val ipKey = "${UserTableKeyPrefix.IP.prefix}${locationKey.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}"
         try {
             dynamoDbEnhancedClient.transactWriteItems {
                 it.addDeleteItem(
@@ -121,7 +120,7 @@ class UserLocationRepository(
                     getUserIpTable(),
                     Key.builder()
                         .partitionValue(userKey)
-                        .sortValue(ipKey)
+                        .sortValue(locationKey.toIpKey())
                         .build()
                 ).build()
             }
@@ -135,16 +134,16 @@ class UserLocationRepository(
     }
 
     fun deleteUserIpByLocationId(userKey: String, locationKey: String): Boolean {
-        val ipKey = "${UserTableKeyPrefix.IP.prefix}${locationKey.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}"
         getUserIpTable().deleteItem(
             Key.builder()
                 .partitionValue(userKey)
-                .sortValue(ipKey)
+                .sortValue(locationKey.toIpKey())
                 .build()
         )
-
         return true
     }
+
+    private fun String.toIpKey() = "${UserTableKeyPrefix.IP.prefix}${this.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}"
 
     private fun getUserLocationTable(): DynamoDbTable<UserLocation> {
         return dynamoDbEnhancedClient.table("Users", TableSchema.fromBean(UserLocation::class.java))
