@@ -45,7 +45,7 @@ class UserService(
     private fun UUID.toUserId() = "${UserTableKeyPrefix.USER.prefix}$this"
 
     private fun UserPrincipal.toResponse() = UserResponse(
-        id = this.userId.substringAfter(UserTableKeyPrefix.USER.prefix),
+        id = UUID.fromString(this.userId.substringAfter(UserTableKeyPrefix.USER.prefix)),
         email = this.email,
         role = this.role
     )
