@@ -18,15 +18,13 @@ import java.time.Instant
 class UserRepository(
     val dynamoDbEnhancedClient: DynamoDbEnhancedClient
 ) {
-    fun <T : User> save(user: T): T {
-        val userTable = getTable(user.javaClass)
-        userTable.putItem(user)
+    fun <T : User> save(user: T): T? {
+        getTable(user.javaClass).putItem(user)
         return user
     }
 
     fun findUserPrincipalByEmail(email: String): UserPrincipal? {
-        val userTable = getTable(UserPrincipal::class.java)
-        val emailGSI = userTable.index("EmailGSI")
+        val emailGSI = getTable(UserPrincipal::class.java).index("EmailGSI")
         val queryConditional = QueryConditional.keyEqualTo {
             it.partitionValue(email)
         }
@@ -39,13 +37,13 @@ class UserRepository(
     }
 
     fun findUserOtpByEmail(email: String): UserOtp? {
-        val userId = findUserPrincipalByEmail(email)?.userId
+        val userKey = this.findUserPrincipalByEmail(email)?.userId
             ?: return null
 
         val userOtpTable = getTable(UserOtp::class.java)
         val queryConditional = sortBeginsWith(
             Key.builder()
-                .partitionValue(userId)
+                .partitionValue(userKey)
                 .sortValue(UserTableKeyPrefix.OTP.prefix)
                 .build()
         )
@@ -57,17 +55,17 @@ class UserRepository(
             }
     }
 
-    fun findUserPrincipalByUserId(userId: String): UserPrincipal? {
+    fun findUserPrincipalByUserId(userKey: String): UserPrincipal? {
         val userTable = getTable(UserPrincipal::class.java)
         return userTable.getItem(
             Key.builder()
-                .partitionValue(userId)
-                .sortValue(userId)
+                .partitionValue(userKey)
+                .sortValue(userKey)
                 .build()
         )
     }
 
-    fun deleteByUserId(userId: String) {
+    fun deleteByUserId(userKey: String) {
         val userPrincipalTable = getTable(UserPrincipal::class.java)
         val userOtpTable = getTable(UserOtp::class.java)
         val userLocationTable = getTable(UserLocation::class.java)
@@ -75,8 +73,8 @@ class UserRepository(
 
         userPrincipalTable.deleteItem(
             Key.builder()
-                .partitionValue(userId)
-                .sortValue(userId)
+                .partitionValue(userKey)
+                .sortValue(userKey)
                 .build()
         )
 
@@ -84,7 +82,7 @@ class UserRepository(
         userOtpTable.query(
             sortBeginsWith(
                 Key.builder()
-                    .partitionValue(userId)
+                    .partitionValue(userKey)
                     .sortValue(UserTableKeyPrefix.OTP.prefix)
                     .build()
             )
@@ -96,7 +94,7 @@ class UserRepository(
         userLocationTable.query(
             sortBeginsWith(
                 Key.builder()
-                    .partitionValue(userId)
+                    .partitionValue(userKey)
                     .sortValue(UserTableKeyPrefix.LOCATION.prefix)
                     .build()
             )
@@ -108,7 +106,7 @@ class UserRepository(
         userIpTable.query(
             sortBeginsWith(
                 Key.builder()
-                    .partitionValue(userId)
+                    .partitionValue(userKey)
                     .sortValue(UserTableKeyPrefix.IP.prefix)
                     .build()
             )

@@ -23,29 +23,31 @@ class UserService(
     }
 
     fun findById(id: UUID): UserResponse? {
-        return userRepository.findUserPrincipalByUserId(id.toUserId())?.toResponse()
+        return userRepository.findUserPrincipalByUserId(id.toUserKey())?.toResponse()
     }
 
     fun deleteById(id: UUID): Boolean {
         this.findById(id) ?: return false
-        userRepository.deleteByUserId(id.toUserId())
+        userRepository.deleteByUserId(id.toUserKey())
         return true
     }
 
     private fun CreateUserRequest.toModel(): UserPrincipal {
         val id = UUID.randomUUID()
         return UserPrincipal(
-            userId = "${UserTableKeyPrefix.USER.prefix}$id",
-            objectId = "${UserTableKeyPrefix.USER.prefix}$id",
+            userId = id.toUserKey(),
+            objectId = id.toUserKey(),
             email = this.email,
             role = "USER"
         )
     }
 
-    private fun UUID.toUserId() = "${UserTableKeyPrefix.USER.prefix}$this"
+    private fun UUID.toUserKey() = "${UserTableKeyPrefix.USER.prefix}$this"
+
+    private fun String.fromKey(keyPrefix: UserTableKeyPrefix) = UUID.fromString(substringAfter(keyPrefix.prefix))
 
     private fun UserPrincipal.toResponse() = UserResponse(
-        id = UUID.fromString(this.userId.substringAfter(UserTableKeyPrefix.USER.prefix)),
+        id = this.userId.fromKey(UserTableKeyPrefix.USER),
         email = this.email,
         role = this.role
     )
