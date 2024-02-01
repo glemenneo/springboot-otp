@@ -30,6 +30,8 @@ class UserController(
     ): ResponseEntity<UserLocationResponse> {
         if (updateLocationRequest.id == null) {
             val userLocationResponse = userLocationService.createLocation(id, updateLocationRequest)
+                ?: return ResponseEntity.badRequest().build()
+
             val location =
                 ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(userLocationResponse.id).toUri()
             return ResponseEntity.created(location).build()
