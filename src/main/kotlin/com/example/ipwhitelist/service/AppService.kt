@@ -14,12 +14,11 @@ class AppService(
     private val userService: UserService
 ) {
 
-    fun getAllApps() : List<ApplicationDetails> {
-        return appRepository.getAllApps()
+    fun getAppsByUserId(userId : String) : List<EnhancedAppResponse> {
+        return appRepository.getAppsByUserId(userId)
     }
 
     fun findById(id: UUID) : ApplicationDetails? {
-        println(id.toString())
         return appRepository.findAppDetailsByAppId(id.toString())
     }
 

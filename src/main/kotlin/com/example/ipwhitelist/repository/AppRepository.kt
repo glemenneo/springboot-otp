@@ -1,15 +1,14 @@
 package com.example.ipwhitelist.repository
 
+import com.example.ipwhitelist.model.EnhancedAppResponse
 import com.example.ipwhitelist.model.dynamodb.Application
 import com.example.ipwhitelist.model.dynamodb.AppTableKeyPrefix
 import com.example.ipwhitelist.model.dynamodb.ApplicationDetails
 import com.example.ipwhitelist.model.dynamodb.ApplicationUser
 import org.springframework.stereotype.Repository
 import software.amazon.awssdk.enhanced.dynamodb.*
-import software.amazon.awssdk.enhanced.dynamodb.model.Page
-import software.amazon.awssdk.enhanced.dynamodb.model.PageIterable
+import software.amazon.awssdk.enhanced.dynamodb.model.*
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith
-import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue
 import java.util.*
 import kotlin.collections.ArrayList
@@ -48,11 +47,71 @@ class AppRepository(
         return items
     }
 
+    fun getAppsByUserId(userId: String) : List<EnhancedAppResponse> {
+
+        val scanEnhancedRequest = ScanEnhancedRequest.builder()
+            .filterExpression(
+                Expression.builder()
+                    .expression("objectId = :objId")
+                    .expressionValues(
+                        Collections.singletonMap(
+                            ":objId", AttributeValue.builder()
+                                .s(userId).build()
+                        )
+                    )
+                    .build()
+            )
+            .build()
+
+        val appUsersTable = getTable(ApplicationUser::class.java)
+        val pageIterable: PageIterable<ApplicationUser> = appUsersTable.scan(scanEnhancedRequest)
+
+        val authorizedApps: MutableList<ApplicationUser> = ArrayList()
+        for (page: Page<ApplicationUser> in pageIterable) {
+            authorizedApps.addAll(page.items())
+        }
+
+        // using the authorized appIds, fetch the corresponding app details from the ApplicationDetails table
+        val appDetailsTable = getTable(ApplicationDetails::class.java)
+        val enhancedAppResponses: MutableList<EnhancedAppResponse> = ArrayList()
+
+        authorizedApps.forEach { app ->
+            val queryConditional = sortBeginsWith(
+                Key.builder()
+                    .partitionValue(app.appId)
+                    .sortValue(AppTableKeyPrefix.APP.prefix)
+                    .build()
+            )
+
+            val queryEnhancedRequest = QueryEnhancedRequest.builder()
+                .queryConditional(queryConditional)
+                .build()
+
+            val appDetailsIterator = appDetailsTable.query(queryEnhancedRequest)
+
+            appDetailsIterator.items().forEach { appDetails ->
+                val appUser = authorizedApps.firstOrNull { app -> app.appId == appDetails.appId }
+                appUser?.let {
+                    enhancedAppResponses.add(
+                        EnhancedAppResponse(
+                            appId = appDetails.appId,
+                            name = appDetails.name,
+                            description = appDetails.description,
+                            role = appUser.role
+                        )
+                    )
+                }
+            }
+        }
+
+        return enhancedAppResponses
+    }
+
     fun findAppDetailsByAppId(appId: String) : ApplicationDetails? {
         val appDetailsTable = getTable(ApplicationDetails::class.java)
         val queryConditional = sortBeginsWith(
             Key.builder()
-                .partitionValue(appId)
+                .partitionValue(AppTableKeyPrefix.APP.prefix + appId)
                 .sortValue(AppTableKeyPrefix.APP.prefix)
                 .build()
         )

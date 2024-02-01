@@ -4,6 +4,7 @@ import com.example.ipwhitelist.model.*
 import com.example.ipwhitelist.model.dynamodb.Application
 import com.example.ipwhitelist.model.dynamodb.ApplicationDetails
 import com.example.ipwhitelist.service.AppService
+import com.example.ipwhitelist.service.UserService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -16,20 +17,18 @@ import java.util.*
 @RestController
 @RequestMapping("api/v1/apps")
 class AppController(
-    private val appService : AppService
+    private val appService : AppService,
+    private val userService: UserService
 ) {
 
     @GetMapping
-    fun getAllApps(): ResponseEntity<List<AppResponse>> {
-        val apps = appService.getAllApps()
-        val appResponses = apps.map {
-            AppResponse(
-                id = it.appId,
-                name = it.name,
-                description = it.description
-            )
-        }
-        return ResponseEntity.ok(appResponses)
+    fun findAppsByUserId(): ResponseEntity<List<EnhancedAppResponse>> {
+        val authentication = SecurityContextHolder.getContext().authentication
+        val userPrincipal = userService.findByEmail(authentication.name)
+
+        val userApps = appService.getAppsByUserId(userPrincipal!!.userId)
+
+        return ResponseEntity.ok(userApps)
     }
 
     @GetMapping("/{id}")
