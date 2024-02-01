@@ -30,6 +30,8 @@ class UserLocationService(
             return null
         }
 
+        //TODO: Add IPSet add ip operation
+
         return UserLocationResponse(
             id = locationId,
             name = userLocation.location,
@@ -39,10 +41,14 @@ class UserLocationService(
     }
 
     fun findByUserId(userId: UUID): UserLocationsResponse {
+        val userKey = userId.toKey(UserTableKeyPrefix.USER)
+
         val userLocations = userLocationRepository.findUserLocationsByUserId(userId.toKey(UserTableKeyPrefix.USER))
+
+        val userLocationKeys = userLocations.map { it.objectId }
         val userIps = userLocationRepository.findUserIpsByLocationIds(
-            userId.toKey(UserTableKeyPrefix.USER),
-            userLocations.map { it.objectId }
+            userKey,
+            userLocationKeys
         )
 
         return UserLocationsResponse(
@@ -64,15 +70,42 @@ class UserLocationService(
             locationKey
         ) ?: return false
 
-        return userLocationRepository.updateLocationAndIp(
-            updateLocationRequest.toLocationModel(userId, updateLocationRequest.id),
-            updateLocationRequest.toIpModel(userId, updateLocationRequest.id)
-        )
+        val userLocation = updateLocationRequest.toLocationModel(userId, updateLocationRequest.id)
+        val userIp = updateLocationRequest.toIpModel(userId, updateLocationRequest.id)
+
+        val existingLocationIp = userLocationRepository.findUserIpByLocationId(userKey, locationKey)
+
+        val isUpdated = userLocationRepository.updateLocationAndIp(userLocation, userIp)
+
+        //TODO: Add IPSet add ip operation or add remove ip operation depending on if existing location ip exists
+
+        return isUpdated
     }
 
-    fun deleteById() {}
+    fun deleteById(userId: UUID, locationId: UUID): Boolean {
+        val userKey = userId.toKey(UserTableKeyPrefix.USER)
+        val locationKey = locationId.toKey(UserTableKeyPrefix.LOCATION)
 
-    fun deleteIpById() {}
+        val existingLocationIp = userLocationRepository.findUserIpByLocationId(userKey, locationKey)
+            ?: return userLocationRepository.deleteByLocationId(userKey, locationKey)
+
+        val isDeleted = userLocationRepository.deleteByLocationId(userKey, locationKey)
+
+        //TODO: Add IPSet remove ip operation
+
+        return isDeleted
+    }
+
+    fun deleteIpById(userId: UUID, locationId: UUID): Boolean {
+        val userKey = userId.toKey(UserTableKeyPrefix.USER)
+        val locationKey = locationId.toKey(UserTableKeyPrefix.LOCATION)
+
+        val isDeleted = userLocationRepository.deleteUserIpByLocationId(userKey, locationKey)
+
+        //TODO: Add IPSet remove ip operation
+
+        return isDeleted
+    }
 
     private fun UUID.toKey(keyPrefix: UserTableKeyPrefix) = "${keyPrefix}$this"
 

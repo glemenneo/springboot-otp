@@ -46,11 +46,21 @@ class UserController(
 
     @DeleteMapping("/{userId}/locations/{locationId}/ip")
     fun deleteIpByLocationId(@PathVariable userId: UUID, @PathVariable locationID: UUID): ResponseEntity<Unit> {
+        val isDeleted = userLocationService.deleteIpById(userId, locationID)
+        if (!isDeleted) {
+            return ResponseEntity.badRequest().build()
+        }
+
         return ResponseEntity.noContent().build()
     }
 
     @DeleteMapping("/{userId}/locations/{locationId}")
     fun deleteLocationByLocationId(@PathVariable userId: UUID, @PathVariable locationID: UUID): ResponseEntity<Unit> {
+        val isDeleted = userLocationService.deleteById(userId, locationID)
+        if (!isDeleted) {
+            return ResponseEntity.badRequest().build()
+        }
+
         return ResponseEntity.noContent().build()
     }
 

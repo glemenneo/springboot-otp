@@ -41,7 +41,6 @@ class UserLocationRepository(
                     .addPutItem(getUserIpTable(), userIp)
                     .build()
             }
-
             return true
         } catch (ex: TransactionCanceledException) {
             ex.cancellationReasons().stream().forEach {
@@ -58,24 +57,11 @@ class UserLocationRepository(
                     getUserLocationTable(), TransactUpdateItemEnhancedRequest.builder(UserLocation::class.java)
                         .item(userLocation)
                         .build()
-                )
-
-                val existingLocationIp = this.findUserIpByLocationId(userLocation.userId, userIp.objectId)
-                if (existingLocationIp != null) {
-                    it.addUpdateItem(
-                        getUserIpTable(), TransactUpdateItemEnhancedRequest.builder(UserIp::class.java)
-                            .item(userIp)
-                            .build()
-                    )
-                } else {
-                    it.addPutItem(
-                        getUserIpTable(), TransactPutItemEnhancedRequest.builder(UserIp::class.java)
-                            .item(userIp)
-                            .build()
-                    )
-                }
-
-                it.build()
+                ).addUpdateItem(
+                    getUserIpTable(), TransactUpdateItemEnhancedRequest.builder(UserIp::class.java)
+                        .item(userIp)
+                        .build()
+                ).build()
             }
             return true
         } catch (ex: TransactionCanceledException) {
@@ -119,6 +105,45 @@ class UserLocationRepository(
         return resultPages.resultsForTable(getUserIpTable())
             .stream()
             .collect(Collectors.toList())
+    }
+
+    fun deleteByLocationId(userKey: String, locationKey: String): Boolean {
+        val ipKey = "${UserTableKeyPrefix.IP.prefix}${locationKey.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}"
+        try {
+            dynamoDbEnhancedClient.transactWriteItems {
+                it.addDeleteItem(
+                    getUserLocationTable(),
+                    Key.builder()
+                        .partitionValue(userKey)
+                        .sortValue(locationKey)
+                        .build()
+                ).addDeleteItem(
+                    getUserIpTable(),
+                    Key.builder()
+                        .partitionValue(userKey)
+                        .sortValue(ipKey)
+                        .build()
+                ).build()
+            }
+            return true
+        } catch (ex: TransactionCanceledException) {
+            ex.cancellationReasons().stream().forEach {
+                println(it.toString())
+            }
+            return false
+        }
+    }
+
+    fun deleteUserIpByLocationId(userKey: String, locationKey: String): Boolean {
+        val ipKey = "${UserTableKeyPrefix.IP.prefix}${locationKey.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}"
+        getUserIpTable().deleteItem(
+            Key.builder()
+                .partitionValue(userKey)
+                .sortValue(ipKey)
+                .build()
+        )
+
+        return true
     }
 
     private fun getUserLocationTable(): DynamoDbTable<UserLocation> {
