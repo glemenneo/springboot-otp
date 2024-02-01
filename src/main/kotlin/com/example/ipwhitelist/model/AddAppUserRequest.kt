@@ -6,6 +6,6 @@ data class AddAppUserRequest(
 )
 
 enum class UserRole {
-    Admin,
-    User
+    ADMIN,
+    USER
 }
