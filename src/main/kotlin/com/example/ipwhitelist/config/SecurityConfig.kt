@@ -40,7 +40,7 @@ class SecurityConfig(
                     .requestMatchers("/api/v1/apps/**")
                     .permitAll()
                     .requestMatchers("/api/v1/admin/*")
-                    .hasRole("Admin")
+                    .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated()
             }

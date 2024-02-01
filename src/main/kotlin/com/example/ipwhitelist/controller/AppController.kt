@@ -33,7 +33,7 @@ class AppController(
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun findById(@PathVariable id: UUID): ResponseEntity<AppResponse> {
         val entity = appService.findById(id)
 
@@ -44,7 +44,7 @@ class AppController(
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun createApp(@RequestBody createAppRequest: CreateAppRequest) : ResponseEntity<AppResponse> {
         val auth = SecurityContextHolder.getContext().authentication
         println("User roles: ${auth.authorities}")
@@ -57,20 +57,20 @@ class AppController(
     }
 
     @DeleteMapping("/{appId}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun deleteApp(@PathVariable appId: String) {
         appService.deleteApp(appId)
     }
 
     @PostMapping("/{appId}/users")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun addUser(@PathVariable appId: String, @RequestBody addAppUserRequest: AddAppUserRequest) : ResponseEntity<Unit> {
         appService.addUser(appId, addAppUserRequest)
         return ResponseEntity.status(HttpStatus.CREATED).build()
     }
 
     @DeleteMapping("/{appId}/users")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun deleteUser(@PathVariable appId: String, @RequestBody deleteAppUserRequest: DeleteAppUserRequest) : ResponseEntity<Unit> {
         appService.deleteUser(appId, deleteAppUserRequest)
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
