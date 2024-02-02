@@ -22,6 +22,14 @@ class AppService(
         return appRepository.findAppDetailsByAppId(id.toString())
     }
 
+    fun findAdminsByAppId(id: UUID) : List<String> {
+        return appRepository.findAdminsByAppId(id.toString())
+    }
+
+    fun findUsersByAppId(id: UUID) : List<String> {
+        return appRepository.findUsersByAppId(id.toString())
+    }
+
     fun createApp(createAppRequest: CreateAppRequest) : ApplicationDetails? {
         val appEntity = createAppRequest.toModel()
         println("Creating app: $appEntity")
@@ -40,7 +48,6 @@ class AppService(
         ))
         val appUser = ApplicationUser(
             appId = AppTableKeyPrefix.APP.prefix + appId,
-            // this already has the 'USER-' prefix
             objectId = user!!.userId,
             role = addAppUserRequest.role.toString(),
         )

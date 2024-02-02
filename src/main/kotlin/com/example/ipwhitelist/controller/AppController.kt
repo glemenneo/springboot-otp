@@ -34,19 +34,25 @@ class AppController(
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     fun findById(@PathVariable id: UUID): ResponseEntity<AppResponse> {
-        val entity = appService.findById(id)
+        val appDetails = appService.findById(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Application with ID $id not found")
+        val appAdmins = appService.findAdminsByAppId(id)
+        val appUsers = appService.findUsersByAppId(id)
 
-        val appResponse = entity?.toResponse()
-            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Application with ID $id not found")
-
-        return ResponseEntity.ok().body(appResponse)
+        //TODO: map userIds back to emails
+        return ResponseEntity.ok(
+            AppResponse(
+                appDetails.appId,
+                appDetails.name,
+                appDetails.description,
+                appAdmins,
+                appUsers
+            )
+        )
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    fun createApp(@RequestBody createAppRequest: CreateAppRequest) : ResponseEntity<AppResponse> {
-        val auth = SecurityContextHolder.getContext().authentication
-        println("User roles: ${auth.authorities}")
+    fun createApp(@RequestBody createAppRequest: CreateAppRequest) : ResponseEntity<CreateAppResponse> {
         val appEntity = appService.createApp(createAppRequest)
             ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create application, application already exists!")
 
@@ -76,7 +82,7 @@ class AppController(
     }
 
     private fun Application.toResponse() = when (this) {
-        is ApplicationDetails -> AppResponse(
+        is ApplicationDetails -> CreateAppResponse(
             id = this.appId,
             name = this.name,
             description = this.description

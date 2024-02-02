@@ -121,6 +121,62 @@ class AppRepository(
             .items().firstOrNull()
     }
 
+    fun findUsersByAppId(appId: String) : List<String> {
+        val appUsersTable = getTable(ApplicationUser::class.java)
+        val queryConditional = sortBeginsWith(
+            Key.builder()
+                .partitionValue(AppTableKeyPrefix.APP.prefix + appId)
+                .sortValue(AppTableKeyPrefix.USER.prefix)
+                .build()
+        )
+
+        val queryEnhancedRequest = QueryEnhancedRequest.builder()
+            .queryConditional(queryConditional)
+            .filterExpression(
+                Expression.builder()
+                    .expression("#role = :role")
+                    .putExpressionValue(":role", AttributeValue.builder().s("USER").build())
+                    .expressionNames(Collections.singletonMap("#role", "role"))
+                    .build()
+            )
+            .build()
+
+        val appAdminsIterator = appUsersTable.query(queryEnhancedRequest)
+
+        val appAdmins: MutableList<String> = ArrayList()
+        appAdminsIterator.items().forEach { appAdmins.add(it.objectId.substringAfter(AppTableKeyPrefix.USER.prefix)) }
+
+        return appAdmins
+    }
+
+    fun findAdminsByAppId(appId: String) : List<String> {
+        val appUsersTable = getTable(ApplicationUser::class.java)
+        val queryConditional = sortBeginsWith(
+            Key.builder()
+                .partitionValue(AppTableKeyPrefix.APP.prefix + appId)
+                .sortValue(AppTableKeyPrefix.USER.prefix)
+                .build()
+        )
+
+        val queryEnhancedRequest = QueryEnhancedRequest.builder()
+            .queryConditional(queryConditional)
+            .filterExpression(
+                Expression.builder()
+                    .expression("#role = :role")
+                    .putExpressionValue(":role", AttributeValue.builder().s("ADMIN").build())
+                    .expressionNames(Collections.singletonMap("#role", "role"))
+                    .build()
+            )
+            .build()
+
+        val appAdminsIterator = appUsersTable.query(queryEnhancedRequest)
+
+        val appAdmins: MutableList<String> = ArrayList()
+        appAdminsIterator.items().forEach { appAdmins.add(it.objectId.substringAfter(AppTableKeyPrefix.USER.prefix)) }
+
+        return appAdmins
+    }
+
     fun deleteApp(appIp : String) {
         val appDetailsTable = getTable(ApplicationDetails::class.java)
         val appUsersTable = getTable(ApplicationUser::class.java)
