@@ -143,10 +143,10 @@ class AppRepository(
 
         val appAdminsIterator = appUsersTable.query(queryEnhancedRequest)
 
-        val appAdmins: MutableList<String> = ArrayList()
-        appAdminsIterator.items().forEach { appAdmins.add(it.objectId.substringAfter(AppTableKeyPrefix.USER.prefix)) }
+        val appUsers: MutableList<String> = ArrayList()
+        appAdminsIterator.items().forEach { appUsers.add(it.objectId.substringAfter(AppTableKeyPrefix.USER.prefix)) }
 
-        return appAdmins
+        return appUsers
     }
 
     fun findAdminsByAppId(appId: String) : List<String> {
