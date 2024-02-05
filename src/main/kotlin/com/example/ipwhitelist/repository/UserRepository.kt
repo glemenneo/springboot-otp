@@ -11,8 +11,6 @@ import software.amazon.awssdk.enhanced.dynamodb.model.Page
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest
-import software.amazon.awssdk.enhanced.dynamodb.model.ReadBatch
-import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException
 import java.time.Instant
 
@@ -62,40 +60,37 @@ class UserRepository(
         val userLocationTable = getTable(UserLocation::class.java)
         val userIpTable = getTable(UserIp::class.java)
 
-        val userOtpReadBatch = ReadBatch.builder(UserOtp::class.java).mappedTableResource(userOtpTable).addGetItem(
-            Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.OTP.prefix).build()
-        ).build()
-        val userLocationReadBatch =
-            ReadBatch.builder(UserLocation::class.java).mappedTableResource(userLocationTable).addGetItem(
-                Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.LOCATION.prefix).build()
-            ).build()
-        val userIpsReadBatch = ReadBatch.builder(UserIp::class.java).mappedTableResource(userIpTable).addGetItem(
-            Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.IP.prefix).build()
-        ).build()
-
-        val resultPages = dynamoDbEnhancedClient.batchGetItem {
-            it.readBatches(
-                userOtpReadBatch, userLocationReadBatch, userIpsReadBatch
+        val userOtpsToDelete = userOtpTable.query(
+            sortBeginsWith(
+                Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.OTP.prefix).build()
             )
-        }
+        ).items()
+        val userLocationsToDelete = userLocationTable.query(
+            sortBeginsWith(
+                Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.LOCATION.prefix).build()
+            )
+        ).items()
+        val userIpsToDelete = userIpTable.query(
+            sortBeginsWith(
+                Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.IP.prefix).build()
+            )
+        ).items()
 
         try {
             dynamoDbEnhancedClient.transactWriteItems {
                 it.addDeleteItem(
                     userPrincipalTable, Key.builder().partitionValue(userKey).sortValue(userKey).build()
                 )
-                resultPages.resultsForTable(userOtpTable).forEach { userOtp ->
+                userOtpsToDelete.forEach { userOtp ->
                     it.addDeleteItem(userOtpTable, userOtp)
                 }
-                resultPages.resultsForTable(userOtpTable).forEach { userOtp ->
-                    it.addDeleteItem(userOtpTable, userOtp)
-                }
-                resultPages.resultsForTable(userLocationTable).forEach { userLocation ->
+                userLocationsToDelete.forEach { userLocation ->
                     it.addDeleteItem(userLocationTable, userLocation)
                 }
-                resultPages.resultsForTable(userIpTable).forEach { userIp ->
+                userIpsToDelete.forEach { userIp ->
                     it.addDeleteItem(userIpTable, userIp)
                 }
+                it.build()
             }
             return true
         } catch (ex: TransactionCanceledException) {
