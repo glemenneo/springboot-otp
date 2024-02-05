@@ -217,9 +217,7 @@ class AppRepository(
                 appDetailsDeleteRequests.forEach { request ->
                     it.addDeleteItem(appDetailsTable, request)
                 }
-            }
 
-            dynamoDbEnhancedClient.transactWriteItems {
                 appUsersDeleteRequests.forEach { request ->
                     it.addDeleteItem(appUsersTable, request)
                 }
