@@ -107,7 +107,7 @@ class UserLocationService(
         return isDeleted
     }
 
-    private fun UUID.toKey(keyPrefix: UserTableKeyPrefix) = "${keyPrefix}$this"
+    private fun UUID.toKey(keyPrefix: UserTableKeyPrefix) = "${keyPrefix.prefix}$this"
 
     private fun String.fromKey(keyPrefix: UserTableKeyPrefix) = UUID.fromString(this.substringAfter(keyPrefix.prefix))
 

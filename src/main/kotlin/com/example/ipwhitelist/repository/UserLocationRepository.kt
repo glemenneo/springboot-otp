@@ -14,32 +14,21 @@ class UserLocationRepository(
     val dynamoDbEnhancedClient: DynamoDbEnhancedClient
 ) {
     fun findUserLocationByLocationId(userKey: String, locationKey: String): UserLocation? {
-        return getUserLocationTable()
-            .getItem(
-                Key.builder()
-                    .partitionValue(userKey)
-                    .sortValue(locationKey)
-                    .build()
-            )
+        return getUserLocationTable().getItem(
+            Key.builder().partitionValue(userKey).sortValue(locationKey).build()
+        )
     }
 
     fun findUserIpByLocationId(userKey: String, locationKey: String): UserIp? {
-        return getUserIpTable()
-            .getItem(
-                Key.builder()
-                    .partitionValue(userKey)
-                    .sortValue(locationKey.toIpKey())
-                    .build()
-            )
+        return getUserIpTable().getItem(
+            Key.builder().partitionValue(userKey).sortValue(locationKey.toIpKey()).build()
+        )
     }
 
     fun saveLocationAndIp(userLocation: UserLocation, userIp: UserIp): Boolean {
         try {
             dynamoDbEnhancedClient.transactWriteItems {
-                it
-                    .addPutItem(getUserLocationTable(), userLocation)
-                    .addPutItem(getUserIpTable(), userIp)
-                    .build()
+                it.addPutItem(getUserLocationTable(), userLocation).addPutItem(getUserIpTable(), userIp).build()
             }
             return true
         } catch (ex: TransactionCanceledException) {
@@ -54,13 +43,10 @@ class UserLocationRepository(
         try {
             dynamoDbEnhancedClient.transactWriteItems {
                 it.addUpdateItem(
-                    getUserLocationTable(), TransactUpdateItemEnhancedRequest.builder(UserLocation::class.java)
-                        .item(userLocation)
-                        .build()
+                    getUserLocationTable(),
+                    TransactUpdateItemEnhancedRequest.builder(UserLocation::class.java).item(userLocation).build()
                 ).addUpdateItem(
-                    getUserIpTable(), TransactUpdateItemEnhancedRequest.builder(UserIp::class.java)
-                        .item(userIp)
-                        .build()
+                    getUserIpTable(), TransactUpdateItemEnhancedRequest.builder(UserIp::class.java).item(userIp).build()
                 ).build()
             }
             return true
@@ -75,26 +61,19 @@ class UserLocationRepository(
     fun findUserLocationsByUserId(userKey: String): List<UserLocation> {
         val userLocationTable = getUserLocationTable()
         val queryConditional = QueryConditional.sortBeginsWith(
-            Key.builder()
-                .partitionValue(userKey)
-                .sortValue(UserTableKeyPrefix.LOCATION.prefix)
-                .build()
+            Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.LOCATION.prefix).build()
         )
-        return userLocationTable
-            .query(queryConditional)
-            .items()
-            .stream()
-            .collect(Collectors.toList())
+        return userLocationTable.query(queryConditional).items().stream().collect(Collectors.toList())
     }
 
     fun findUserIpsByLocationIds(userKey: String, locationKeys: List<String>): List<UserIp> {
-        val userIpReadBatch = ReadBatch.builder(UserIp::class.java)
-        locationKeys.forEach {
+        if (locationKeys.isEmpty()) {
+            return emptyList()
+        }
+        val userIpReadBatch = ReadBatch.builder(UserIp::class.java).mappedTableResource(getUserIpTable())
+        locationKeys.forEach { locationKey ->
             userIpReadBatch.addGetItem(
-                Key.builder()
-                    .partitionValue(userKey)
-                    .sortValue(it.toIpKey())
-                    .build()
+                Key.builder().partitionValue(userKey).sortValue(locationKey.toIpKey()).build()
             )
         }
 
@@ -102,26 +81,16 @@ class UserLocationRepository(
             it.readBatches(userIpReadBatch.build())
         }
 
-        return resultPages.resultsForTable(getUserIpTable())
-            .stream()
-            .collect(Collectors.toList())
+        return resultPages.resultsForTable(getUserIpTable()).stream().collect(Collectors.toList())
     }
 
     fun deleteByLocationId(userKey: String, locationKey: String): Boolean {
         try {
             dynamoDbEnhancedClient.transactWriteItems {
                 it.addDeleteItem(
-                    getUserLocationTable(),
-                    Key.builder()
-                        .partitionValue(userKey)
-                        .sortValue(locationKey)
-                        .build()
+                    getUserLocationTable(), Key.builder().partitionValue(userKey).sortValue(locationKey).build()
                 ).addDeleteItem(
-                    getUserIpTable(),
-                    Key.builder()
-                        .partitionValue(userKey)
-                        .sortValue(locationKey.toIpKey())
-                        .build()
+                    getUserIpTable(), Key.builder().partitionValue(userKey).sortValue(locationKey.toIpKey()).build()
                 ).build()
             }
             return true
@@ -135,15 +104,13 @@ class UserLocationRepository(
 
     fun deleteUserIpByLocationId(userKey: String, locationKey: String): Boolean {
         getUserIpTable().deleteItem(
-            Key.builder()
-                .partitionValue(userKey)
-                .sortValue(locationKey.toIpKey())
-                .build()
+            Key.builder().partitionValue(userKey).sortValue(locationKey.toIpKey()).build()
         )
         return true
     }
 
-    private fun String.toIpKey() = "${UserTableKeyPrefix.IP.prefix}${this.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}"
+    private fun String.toIpKey() =
+        "${UserTableKeyPrefix.IP.prefix}${this.substringAfter(UserTableKeyPrefix.LOCATION.prefix)}"
 
     private fun getUserLocationTable(): DynamoDbTable<UserLocation> {
         return dynamoDbEnhancedClient.table("Users", TableSchema.fromBean(UserLocation::class.java))
