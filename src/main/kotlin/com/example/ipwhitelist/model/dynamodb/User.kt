@@ -92,5 +92,3 @@ data class UserOtp(
 ) {
     constructor() : this("", "", "", "", 0)
 }
-
-

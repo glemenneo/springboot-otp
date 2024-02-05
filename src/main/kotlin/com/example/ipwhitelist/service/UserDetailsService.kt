@@ -16,6 +16,7 @@ class UserDetailsService(
 
         return User
             .withUsername(userEntity.email)
+            .password("")
             .roles(userEntity.role)
             .build()
     }

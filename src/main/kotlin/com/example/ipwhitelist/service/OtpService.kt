@@ -16,16 +16,20 @@ class OtpService(
     fun generateOtp(email: String): String {
         val otp = (10000..999999).random().toString()
 
-        var userId = userRepository.findUserPrincipalByEmail(email)?.userId
-        if (userId == null) {
+        // Check if the user already exists
+        var userEntity = userRepository.findUserPrincipalByEmail(email)
+
+        if (userEntity == null) {
             val createUserRequest = CreateUserRequest(email = email, role = "USER")
-            val id = userService.createUser(createUserRequest)?.id
-                ?: throw RuntimeException("Failed to generate OTP")
-            userId = "${UserTableKeyPrefix.USER.prefix}$id"
+            userEntity = userService.createUser(createUserRequest)
+
+            if (userEntity == null) {
+                throw RuntimeException("Failed to generate OTP")
+            }
         }
 
         val userOtp = UserOtp(
-            userId = userId,
+            userId = userEntity.userId,
             objectId = "${UserTableKeyPrefix.OTP.prefix}${UUID.randomUUID()}",
             otp = otp,
             expiryDate = Instant.ofEpochMilli(System.currentTimeMillis() + 300000).toString(),
@@ -37,8 +41,7 @@ class OtpService(
     }
 
     fun validateOtp(email: String, otp: String): Boolean {
-        val userOtp = userRepository.findUserOtpByEmail(email = email)
-        println("OTP Matches: ${userOtp?.otp == otp}")
-        return userOtp?.otp == otp
+        val otpEntity = userRepository.findUserOtpByEmail(email = email)
+        return otpEntity?.otp == otp
     }
 }
