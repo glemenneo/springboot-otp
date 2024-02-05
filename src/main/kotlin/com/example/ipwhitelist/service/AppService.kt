@@ -4,6 +4,7 @@ import com.example.ipwhitelist.model.*
 import com.example.ipwhitelist.model.dynamodb.ApplicationUser
 import com.example.ipwhitelist.model.dynamodb.AppTableKeyPrefix
 import com.example.ipwhitelist.model.dynamodb.ApplicationDetails
+import com.example.ipwhitelist.model.dynamodb.UserTableKeyPrefix
 import com.example.ipwhitelist.repository.AppRepository
 import org.springframework.stereotype.Service
 import java.util.UUID
@@ -53,7 +54,7 @@ class AppService(
         ))
         val appUser = ApplicationUser(
             appId = appKey,
-            objectId = user!!.userId,
+            objectId = "${UserTableKeyPrefix.USER.prefix}${user!!.id}",
             role = addAppUserRequest.role.toString(),
         )
         appRepository.save(appUser)

@@ -12,6 +12,11 @@ enum class UserTableKeyPrefix(val prefix: String) {
     IP("IP-")
 }
 
+enum class UserRole {
+    ADMIN,
+    USER
+}
+
 @DynamoDbBean
 abstract class User(
     @get:DynamoDbPartitionKey

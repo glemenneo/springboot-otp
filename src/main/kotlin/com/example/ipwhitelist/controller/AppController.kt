@@ -3,6 +3,7 @@ package com.example.ipwhitelist.controller
 import com.example.ipwhitelist.model.*
 import com.example.ipwhitelist.model.dynamodb.Application
 import com.example.ipwhitelist.model.dynamodb.ApplicationDetails
+import com.example.ipwhitelist.model.dynamodb.UserTableKeyPrefix
 import com.example.ipwhitelist.service.AppService
 import com.example.ipwhitelist.service.UserService
 import org.springframework.http.HttpStatus
@@ -24,9 +25,9 @@ class AppController(
     @GetMapping
     fun findAppsByUserId(): ResponseEntity<List<EnhancedAppResponse>> {
         val authentication = SecurityContextHolder.getContext().authentication
-        val userPrincipal = userService.findByEmail(authentication.name)
-
-        val userApps = appService.getAppsByUserKey(userPrincipal!!.userId)
+        val userId = userService.findByEmail(authentication.name)!!.id
+        val userKey = "${UserTableKeyPrefix.USER}$userId"
+        val userApps = appService.getAppsByUserKey(userKey)
 
         return ResponseEntity.ok(userApps)
     }

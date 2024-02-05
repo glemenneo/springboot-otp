@@ -17,19 +17,19 @@ class OtpService(
         val otp = (10000..999999).random().toString()
 
         // Check if the user already exists
-        var userEntity = userRepository.findUserPrincipalByEmail(email)
+        var user = userService.findByEmail(email)
 
-        if (userEntity == null) {
+        if (user == null) {
             val createUserRequest = CreateUserRequest(email = email, role = "USER")
-            userEntity = userService.createUser(createUserRequest)
+            user = userService.createUser(createUserRequest)
 
-            if (userEntity == null) {
+            if (user == null) {
                 throw RuntimeException("Failed to generate OTP")
             }
         }
 
         val userOtp = UserOtp(
-            userId = userEntity.userId,
+            userId = "${UserTableKeyPrefix.USER.prefix}${user.id}",
             objectId = "${UserTableKeyPrefix.OTP.prefix}${UUID.randomUUID()}",
             otp = otp,
             expiryDate = Instant.ofEpochMilli(System.currentTimeMillis() + 300000).toString(),
