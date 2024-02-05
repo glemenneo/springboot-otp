@@ -28,17 +28,13 @@ class UserService(
 
     fun deleteById(id: UUID): Boolean {
         this.findById(id) ?: return false
-        userRepository.deleteByUserId(id.toUserKey())
-        return true
+        return userRepository.deleteByUserId(id.toUserKey())
     }
 
     private fun CreateUserRequest.toModel(): UserPrincipal {
         val id = UUID.randomUUID()
         return UserPrincipal(
-            userId = id.toUserKey(),
-            objectId = id.toUserKey(),
-            email = this.email,
-            role = "USER"
+            userId = id.toUserKey(), objectId = id.toUserKey(), email = this.email, role = "USER"
         )
     }
 
@@ -47,8 +43,6 @@ class UserService(
     private fun String.fromKey(keyPrefix: UserTableKeyPrefix) = UUID.fromString(substringAfter(keyPrefix.prefix))
 
     private fun UserPrincipal.toResponse() = UserResponse(
-        id = this.userId.fromKey(UserTableKeyPrefix.USER),
-        email = this.email,
-        role = this.role
+        id = this.userId.fromKey(UserTableKeyPrefix.USER), email = this.email, role = this.role
     )
 }
