@@ -14,7 +14,12 @@ enum class UserTableKeyPrefix(val prefix: String) {
 
 enum class UserRole {
     ADMIN,
-    USER
+    USER;
+
+    object Constants {
+        const val ADMIN_ROLE: String = "ADMIN"
+        const val USER_ROLE: String = "USER"
+    }
 }
 
 @DynamoDbBean

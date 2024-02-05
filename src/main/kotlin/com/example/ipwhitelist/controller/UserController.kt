@@ -1,10 +1,12 @@
 package com.example.ipwhitelist.controller
 
 import com.example.ipwhitelist.model.*
+import com.example.ipwhitelist.model.dynamodb.UserRole
 import com.example.ipwhitelist.service.UserLocationService
 import com.example.ipwhitelist.service.UserService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
@@ -65,6 +67,7 @@ class UserController(
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('${UserRole.Constants.ADMIN_ROLE}')")
     fun createUser(@RequestBody createUserRequest: CreateUserRequest): ResponseEntity<UserResponse> {
         val userResponse = userService.createUser(createUserRequest)
             ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create User, User already exists!")
