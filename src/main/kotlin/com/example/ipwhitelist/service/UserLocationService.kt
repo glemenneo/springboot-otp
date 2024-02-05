@@ -119,7 +119,7 @@ class UserLocationService(
 
     private fun UpdateLocationRequest.toIpModel(userId: UUID, locationId: UUID) = UserIp(
         userId = userId.toKey(UserTableKeyPrefix.USER),
-        objectId = locationId.toKey(UserTableKeyPrefix.LOCATION),
+        objectId = locationId.toKey(UserTableKeyPrefix.IP),
         ip = this.ip,
         ttl = 86400
     )
