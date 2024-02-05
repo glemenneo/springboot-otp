@@ -34,7 +34,7 @@ class UserLocationService(
 
         return UserLocationResponse(
             id = locationId,
-            name = userLocation.location,
+            name = userLocation.name,
             ip = userIp.ip,
             ttl = userIp.ttl,
         )
@@ -114,7 +114,7 @@ class UserLocationService(
     private fun UpdateLocationRequest.toLocationModel(userId: UUID, locationId: UUID) = UserLocation(
         userId = userId.toKey(UserTableKeyPrefix.USER),
         objectId = locationId.toKey(UserTableKeyPrefix.LOCATION),
-        location = this.name
+        name = this.name
     )
 
     private fun UpdateLocationRequest.toIpModel(userId: UUID, locationId: UUID) = UserIp(
@@ -126,7 +126,7 @@ class UserLocationService(
 
     private fun UserLocation.toResponse(userIp: UserIp?) = UserLocationResponse(
         id = this.objectId.fromKey(UserTableKeyPrefix.LOCATION),
-        name = this.location,
+        name = this.name,
         ip = userIp?.ip,
         ttl = userIp?.ttl
     )

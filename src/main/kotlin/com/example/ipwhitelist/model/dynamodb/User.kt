@@ -49,7 +49,7 @@ data class UserLocation(
     @get:DynamoDbSortKey
     override var objectId: String,
 
-    var location: String
+    var name: String
 ) : User(
     userId = "${UserTableKeyPrefix.USER.prefix}$userId",
     objectId = "${UserTableKeyPrefix.LOCATION.prefix}$objectId"
