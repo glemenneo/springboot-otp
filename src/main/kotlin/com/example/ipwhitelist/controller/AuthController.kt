@@ -32,7 +32,6 @@ class AuthController(
 
     @PostMapping("/verify-otp")
     fun verifyOtp(@RequestBody verifyOtpRequest: VerifyOtpRequest): ResponseEntity<VerifyOtpResponse> {
-        println("API triggered")
         val isOtpValid = authService.verifyOtp(verifyOtpRequest.email, verifyOtpRequest.otp)
 
         if (isOtpValid) {

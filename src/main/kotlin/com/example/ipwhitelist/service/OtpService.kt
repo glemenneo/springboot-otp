@@ -26,8 +26,6 @@ class OtpService(
             if (userEntity == null) {
                 throw RuntimeException("Failed to generate OTP")
             }
-        } else {
-            throw RuntimeException("User already exists!")
         }
 
         val userOtp = UserOtp(
@@ -44,7 +42,6 @@ class OtpService(
 
     fun validateOtp(email: String, otp: String): Boolean {
         val otpEntity = userRepository.findUserOtpByEmail(email = email)
-        println("OTP Matches: ${otpEntity?.otp == otp}")
         return otpEntity?.otp == otp
     }
 }

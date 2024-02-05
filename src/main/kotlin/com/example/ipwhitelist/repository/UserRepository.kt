@@ -47,7 +47,8 @@ class UserRepository(
         val queryConditional = sortBeginsWith(
             Key.builder()
                 .partitionValue(userId)
-                .sortValue(DataClassMappings.USER_OTP_PREFIX)
+                //TODO: Use the OTP mapping prefix
+                .sortValue("OTP-")
                 .build()
         )
 
