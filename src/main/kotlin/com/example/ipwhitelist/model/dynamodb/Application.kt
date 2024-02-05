@@ -2,6 +2,7 @@ package com.example.ipwhitelist.model.dynamodb
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey
 
 enum class AppTableKeyPrefix(val prefix: String) {
@@ -13,6 +14,7 @@ open class Application(
     @get:DynamoDbPartitionKey
     open var appId: String,
 
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["UserGSI"])
     @get:DynamoDbSortKey
     open var objectId: String
 )
@@ -22,6 +24,7 @@ data class ApplicationDetails(
     @get:DynamoDbPartitionKey
     override var appId: String,
 
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["UserGSI"])
     @get:DynamoDbSortKey
     override var objectId: String,
 
@@ -40,6 +43,7 @@ data class ApplicationUser(
     @get:DynamoDbPartitionKey
     override var appId: String,
 
+    @get:DynamoDbSecondaryPartitionKey(indexNames = ["UserGSI"])
     @get:DynamoDbSortKey
     override var objectId: String,
 

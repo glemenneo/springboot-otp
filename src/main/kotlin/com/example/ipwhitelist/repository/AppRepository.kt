@@ -1,10 +1,7 @@
 package com.example.ipwhitelist.repository
 
 import com.example.ipwhitelist.model.EnhancedAppResponse
-import com.example.ipwhitelist.model.dynamodb.Application
-import com.example.ipwhitelist.model.dynamodb.AppTableKeyPrefix
-import com.example.ipwhitelist.model.dynamodb.ApplicationDetails
-import com.example.ipwhitelist.model.dynamodb.ApplicationUser
+import com.example.ipwhitelist.model.dynamodb.*
 import org.springframework.stereotype.Repository
 import software.amazon.awssdk.enhanced.dynamodb.*
 import software.amazon.awssdk.enhanced.dynamodb.model.*
@@ -23,62 +20,37 @@ class AppRepository(
         return application
     }
 
-    fun getAllApps(): List<ApplicationDetails> {
-        val appTable = getTable(ApplicationDetails::class.java)
-        val items: MutableList<ApplicationDetails> = ArrayList()
-
-        val scanEnhancedRequest = ScanEnhancedRequest.builder()
-            .filterExpression(
-                Expression.builder()
-                    .expression("begins_with(objectId, :prefix)")
-                    .expressionValues(Collections.singletonMap(
-                        ":prefix", AttributeValue.builder()
-                            .s(AppTableKeyPrefix.APP.prefix).build()))
-                    .build()
-            )
-            .build()
-
-        val pageIterable: PageIterable<ApplicationDetails> = appTable.scan(scanEnhancedRequest)
-
-        for (page: Page<ApplicationDetails> in pageIterable) {
-            items.addAll(page.items())
-        }
-
-        return items
-    }
-
     fun getAppsByUserId(userId: String) : List<EnhancedAppResponse> {
 
-        val scanEnhancedRequest = ScanEnhancedRequest.builder()
-            .filterExpression(
-                Expression.builder()
-                    .expression("objectId = :objId")
-                    .expressionValues(
-                        Collections.singletonMap(
-                            ":objId", AttributeValue.builder()
-                                .s(userId).build()
-                        )
-                    )
-                    .build()
-            )
+        val appUsersTable = getTable(ApplicationUser::class.java)
+        val appGSI = appUsersTable.index("UserGSI")
+
+        val appsQueryConditional = QueryConditional.keyEqualTo {
+            it.partitionValue(userId)
+        }
+
+        val appsQueryEnhancedRequest = QueryEnhancedRequest.builder()
+            .queryConditional(appsQueryConditional)
             .build()
 
-        val appUsersTable = getTable(ApplicationUser::class.java)
-        val pageIterable: PageIterable<ApplicationUser> = appUsersTable.scan(scanEnhancedRequest)
-
+        val authorizedAppsIterator = appGSI.query(appsQueryEnhancedRequest)
         val authorizedApps: MutableList<ApplicationUser> = ArrayList()
-        for (page: Page<ApplicationUser> in pageIterable) {
+
+        for (page: Page<ApplicationUser> in authorizedAppsIterator) {
             authorizedApps.addAll(page.items())
         }
 
         // using the authorized appIds, fetch the corresponding app details from the ApplicationDetails table
         val appDetailsTable = getTable(ApplicationDetails::class.java)
-        val enhancedAppResponses: MutableList<EnhancedAppResponse> = ArrayList()
+        val uniqueAppIds = authorizedApps.map { it.appId }.toSet()
 
-        authorizedApps.forEach { app ->
+        val appDetailsReadBatch = ReadBatch.builder(ApplicationDetails::class.java)
+            .mappedTableResource(appDetailsTable)
+
+        uniqueAppIds.forEach { appId ->
             val queryConditional = sortBeginsWith(
                 Key.builder()
-                    .partitionValue(app.appId)
+                    .partitionValue(appId)
                     .sortValue(AppTableKeyPrefix.APP.prefix)
                     .build()
             )
@@ -89,18 +61,29 @@ class AppRepository(
 
             val appDetailsIterator = appDetailsTable.query(queryEnhancedRequest)
 
-            appDetailsIterator.items().forEach { appDetails ->
-                val appUser = authorizedApps.firstOrNull { app -> app.appId == appDetails.appId }
-                appUser?.let {
-                    enhancedAppResponses.add(
-                        EnhancedAppResponse(
-                            appId = appDetails.appId,
-                            name = appDetails.name,
-                            description = appDetails.description,
-                            role = appUser.role
-                        )
+            appDetailsIterator.items()
+                .forEach { appDetailsReadBatch.addGetItem(it) }
+        }
+
+        val appDetailsBatchResults = dynamoDbEnhancedClient.batchGetItem(
+            BatchGetItemEnhancedRequest.builder()
+                .readBatches(appDetailsReadBatch.build())
+                .build()
+        ).resultsForTable(appDetailsTable)
+
+        val enhancedAppResponses: MutableList<EnhancedAppResponse> = ArrayList()
+
+        appDetailsBatchResults.forEach { appDetails ->
+            val appUser = authorizedApps.firstOrNull { it.appId == appDetails.appId }
+            appUser?.let {
+                enhancedAppResponses.add(
+                    EnhancedAppResponse(
+                        appId = appDetails.appId,
+                        name = appDetails.name,
+                        description = appDetails.description,
+                        role = appUser.role
                     )
-                }
+                )
             }
         }
 
@@ -177,30 +160,54 @@ class AppRepository(
         return appAdmins
     }
 
-    fun deleteApp(appIp : String) {
+    fun deleteApp(appId: String) {
         val appDetailsTable = getTable(ApplicationDetails::class.java)
         val appUsersTable = getTable(ApplicationUser::class.java)
+
+        val appDetailsWriteBatch = WriteBatch.builder(ApplicationDetails::class.java)
+            .mappedTableResource(appDetailsTable)
 
         appDetailsTable.query(
             sortBeginsWith(
                 Key.builder()
-                    .partitionValue(appIp)
+                    .partitionValue(appId)
                     .sortValue(AppTableKeyPrefix.APP.prefix)
                     .build()
             )
         ).items()
-            .forEach(appDetailsTable::deleteItem)
+            .forEach { appDetailsWriteBatch.addDeleteItem(it) }
+
+        val appUsersWriteBatch = WriteBatch.builder(ApplicationUser::class.java)
+            .mappedTableResource(appUsersTable)
 
         appUsersTable.query(
             sortBeginsWith(
                 Key.builder()
-                    .partitionValue(appIp)
+                    .partitionValue(appId)
                     .sortValue(AppTableKeyPrefix.USER.prefix)
                     .build()
             )
         ).items()
-            .forEach(appUsersTable::deleteItem)
+            .forEach { appUsersWriteBatch.addDeleteItem(it) }
+
+        val batchWriteRequest = BatchWriteItemEnhancedRequest.builder()
+            .writeBatches(
+                appDetailsWriteBatch.build(),
+                appUsersWriteBatch.build()
+            )
+            .build()
+
+        val batchWriteResult = dynamoDbEnhancedClient.batchWriteItem(batchWriteRequest)
+
+        for (key in batchWriteResult.unprocessedDeleteItemsForTable(appDetailsTable)) {
+            println(key)
+        }
+
+        for (key in batchWriteResult.unprocessedDeleteItemsForTable(appUsersTable)) {
+            println(key)
+        }
     }
+
 
     fun deleteUser(appId: String, userId: String) {
         val appUsersTable = getTable(ApplicationUser::class.java)
