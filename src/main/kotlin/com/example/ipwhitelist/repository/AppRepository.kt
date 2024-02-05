@@ -7,6 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.*
 import software.amazon.awssdk.enhanced.dynamodb.model.*
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -104,11 +105,11 @@ class AppRepository(
             .items().firstOrNull()
     }
 
-    fun findUsersByAppId(appId: String) : List<String> {
+    fun findUsersByAppId(appKey: String) : List<String> {
         val appUsersTable = getTable(ApplicationUser::class.java)
         val queryConditional = sortBeginsWith(
             Key.builder()
-                .partitionValue(AppTableKeyPrefix.APP.prefix + appId)
+                .partitionValue(AppTableKeyPrefix.APP.prefix + appKey)
                 .sortValue(AppTableKeyPrefix.USER.prefix)
                 .build()
         )
@@ -132,11 +133,11 @@ class AppRepository(
         return appUsers
     }
 
-    fun findAdminsByAppId(appId: String) : List<String> {
+    fun findAdminsByAppId(appKey: String) : List<String> {
         val appUsersTable = getTable(ApplicationUser::class.java)
         val queryConditional = sortBeginsWith(
             Key.builder()
-                .partitionValue(AppTableKeyPrefix.APP.prefix + appId)
+                .partitionValue(AppTableKeyPrefix.APP.prefix + appKey)
                 .sortValue(AppTableKeyPrefix.USER.prefix)
                 .build()
         )
@@ -160,68 +161,98 @@ class AppRepository(
         return appAdmins
     }
 
-    fun deleteApp(appId: String) {
+    fun deleteByAppId(appKey: String) : Boolean {
         val appDetailsTable = getTable(ApplicationDetails::class.java)
         val appUsersTable = getTable(ApplicationUser::class.java)
 
-        val appDetailsWriteBatch = WriteBatch.builder(ApplicationDetails::class.java)
-            .mappedTableResource(appDetailsTable)
-
-        appDetailsTable.query(
-            sortBeginsWith(
-                Key.builder()
-                    .partitionValue(appId)
-                    .sortValue(AppTableKeyPrefix.APP.prefix)
-                    .build()
-            )
-        ).items()
-            .forEach { appDetailsWriteBatch.addDeleteItem(it) }
-
-        val appUsersWriteBatch = WriteBatch.builder(ApplicationUser::class.java)
-            .mappedTableResource(appUsersTable)
-
-        appUsersTable.query(
-            sortBeginsWith(
-                Key.builder()
-                    .partitionValue(appId)
-                    .sortValue(AppTableKeyPrefix.USER.prefix)
-                    .build()
-            )
-        ).items()
-            .forEach { appUsersWriteBatch.addDeleteItem(it) }
-
-        val batchWriteRequest = BatchWriteItemEnhancedRequest.builder()
-            .writeBatches(
-                appDetailsWriteBatch.build(),
-                appUsersWriteBatch.build()
+        val appDetailsQueryRequest = QueryEnhancedRequest.builder()
+            .queryConditional(
+                sortBeginsWith(
+                    Key.builder()
+                        .partitionValue(appKey)
+                        .sortValue(AppTableKeyPrefix.APP.prefix)
+                        .build()
+                )
             )
             .build()
 
-        val batchWriteResult = dynamoDbEnhancedClient.batchWriteItem(batchWriteRequest)
+        val appDetailsToDelete = appDetailsTable.query(appDetailsQueryRequest).items()
 
-        for (key in batchWriteResult.unprocessedDeleteItemsForTable(appDetailsTable)) {
-            println(key)
+        val appDetailsDeleteRequests = appDetailsToDelete.map {
+            TransactDeleteItemEnhancedRequest.builder()
+                .key(
+                    Key.builder()
+                        .partitionValue(it.appId)
+                        .sortValue(it.objectId)
+                        .build()
+                )
+                .build()
         }
 
-        for (key in batchWriteResult.unprocessedDeleteItemsForTable(appUsersTable)) {
-            println(key)
+        val appUsersQueryRequest = QueryEnhancedRequest.builder()
+            .queryConditional(
+                sortBeginsWith(
+                    Key.builder()
+                        .partitionValue(appKey)
+                        .sortValue(AppTableKeyPrefix.USER.prefix)
+                        .build()
+                )
+            )
+            .build()
+
+        val appUsersToDelete = appDetailsTable.query(appUsersQueryRequest).items()
+        val appUsersDeleteRequests = appUsersToDelete.map {
+            TransactDeleteItemEnhancedRequest.builder()
+                .key(
+                    Key.builder()
+                        .partitionValue(it.appId)
+                        .sortValue(it.objectId)
+                        .build()
+                )
+                .build()
+        }
+
+        try {
+            dynamoDbEnhancedClient.transactWriteItems {
+                appDetailsDeleteRequests.forEach { request ->
+                    it.addDeleteItem(appDetailsTable, request)
+                }
+            }
+
+            dynamoDbEnhancedClient.transactWriteItems {
+                appUsersDeleteRequests.forEach { request ->
+                    it.addDeleteItem(appUsersTable, request)
+                }
+            }
+            return true
+        } catch (ex: TransactionCanceledException) {
+            ex.cancellationReasons().forEach {
+                println(it.toString())
+            }
+            return false
         }
     }
 
 
-    fun deleteUser(appId: String, userId: String) {
+    fun deleteUser(appKey: String, userKey: String) : Boolean {
         val appUsersTable = getTable(ApplicationUser::class.java)
 
-        val userToDelete = appUsersTable.query(
-            sortBeginsWith(
-                Key.builder()
-                    .partitionValue(AppTableKeyPrefix.APP.prefix + appId)
-                    .sortValue(AppTableKeyPrefix.USER.prefix + userId)
-                    .build()
-            )
-        ).items().firstOrNull()
-
-        userToDelete?.let { appUsersTable.deleteItem(it) }
+        try {
+            dynamoDbEnhancedClient.transactWriteItems {
+                it.addDeleteItem(
+                    appUsersTable, Key.builder()
+                        .partitionValue(appKey)
+                        .sortValue(userKey)
+                        .build()
+                )
+            }
+            return true
+        } catch (ex: TransactionCanceledException) {
+            ex.cancellationReasons().stream().forEach {
+                println(it.toString())
+            }
+            return false
+        }
     }
 
     private fun <T : Application> getTable(clazz: Class<T>): DynamoDbTable<T> {

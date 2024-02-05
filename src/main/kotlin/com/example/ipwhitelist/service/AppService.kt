@@ -14,8 +14,8 @@ class AppService(
     private val userService: UserService
 ) {
 
-    fun getAppsByUserId(userId : String) : List<EnhancedAppResponse> {
-        return appRepository.getAppsByUserId(userId)
+    fun getAppsByUserKey(userKey : String) : List<EnhancedAppResponse> {
+        return appRepository.getAppsByUserId(userKey)
     }
 
     fun findById(id: UUID) : ApplicationDetails? {
@@ -32,40 +32,57 @@ class AppService(
 
     fun createApp(createAppRequest: CreateAppRequest) : ApplicationDetails? {
         val appEntity = createAppRequest.toModel()
-        println("Creating app: $appEntity")
         appRepository.save(appEntity)
         return appEntity
     }
 
-    fun deleteApp(appId: String) {
-        appRepository.deleteApp(appId)
+    fun deleteById(appId: UUID) : Boolean {
+        this.findById(appId) ?: return false
+
+        val appKey = appId.toKey(AppTableKeyPrefix.APP)
+        val isDeleted = appRepository.deleteByAppId(appKey)
+
+        return isDeleted
     }
 
-    fun addUser(appId : String, addAppUserRequest: AddAppUserRequest) {
+    fun addUser(appId : UUID, addAppUserRequest: AddAppUserRequest) {
         // fetch existing user, else create new user with the specified role
+        val appKey = appId.toKey(AppTableKeyPrefix.APP)
         val user = userService.findByEmail(addAppUserRequest.email)
             ?: userService.createUser(CreateUserRequest(addAppUserRequest.email, addAppUserRequest.role.toString()
         ))
         val appUser = ApplicationUser(
-            appId = AppTableKeyPrefix.APP.prefix + appId,
+            appId = appKey,
             objectId = user!!.userId,
             role = addAppUserRequest.role.toString(),
         )
         appRepository.save(appUser)
     }
 
-    fun deleteUser(appId: String, deleteAppUserRequest: DeleteAppUserRequest) {
-        appRepository.deleteUser(appId, deleteAppUserRequest.userId)
+    fun deleteUser(appId: UUID, deleteAppUserRequest: DeleteAppUserRequest) : Boolean {
+        this.findById(appId) ?: return false
+
+        val appKey = appId.toKey(AppTableKeyPrefix.APP)
+        val userKey = deleteAppUserRequest.userId.toKey(AppTableKeyPrefix.USER)
+        val isDeleted = appRepository.deleteUser(appKey, userKey)
+
+        return isDeleted
     }
 
-    private fun CreateAppRequest.toModel() = ApplicationDetails(
-        appId = AppTableKeyPrefix.APP.prefix + UUID.randomUUID().toString(),
-        objectId = AppTableKeyPrefix.APP.prefix + UUID.randomUUID().toString(),
-        name = this.name,
-        description = this.description,
-        accountId = this.accountId,
-        changeToken = this.changeToken,
-        ipSetId = this.ipSetId
-    )
+    private fun CreateAppRequest.toModel(): ApplicationDetails {
+        val uuid = UUID.randomUUID().toString()
+
+        return ApplicationDetails(
+            appId = AppTableKeyPrefix.APP.prefix + uuid,
+            objectId = AppTableKeyPrefix.APP.prefix + uuid,
+            name = this.name,
+            description = this.description,
+            accountId = this.accountId,
+            changeToken = this.changeToken,
+            ipSetId = this.ipSetId
+        )
+    }
+
+    private fun UUID.toKey(keyPrefix: AppTableKeyPrefix) = "${keyPrefix.prefix}$this"
 
 }

@@ -26,7 +26,7 @@ class AppController(
         val authentication = SecurityContextHolder.getContext().authentication
         val userPrincipal = userService.findByEmail(authentication.name)
 
-        val userApps = appService.getAppsByUserId(userPrincipal!!.userId)
+        val userApps = appService.getAppsByUserKey(userPrincipal!!.userId)
 
         return ResponseEntity.ok(userApps)
     }
@@ -63,22 +63,29 @@ class AppController(
 
     @DeleteMapping("/{appId}")
     @PreAuthorize("hasRole('ADMIN')")
-    fun deleteApp(@PathVariable appId: String) {
-        appService.deleteApp(appId)
+    fun deleteApp(@PathVariable appId: UUID) : ResponseEntity<Unit> {
+        val isDeleted = appService.deleteById(appId)
+        if (!isDeleted) {
+            return ResponseEntity.badRequest().build()
+        }
+        return ResponseEntity.noContent().build()
     }
 
     @PostMapping("/{appId}/users")
     @PreAuthorize("hasRole('ADMIN')")
-    fun addUser(@PathVariable appId: String, @RequestBody addAppUserRequest: AddAppUserRequest) : ResponseEntity<Unit> {
+    fun addUser(@PathVariable appId: UUID, @RequestBody addAppUserRequest: AddAppUserRequest) : ResponseEntity<Unit> {
         appService.addUser(appId, addAppUserRequest)
         return ResponseEntity.status(HttpStatus.CREATED).build()
     }
 
     @DeleteMapping("/{appId}/users")
     @PreAuthorize("hasRole('ADMIN')")
-    fun deleteUser(@PathVariable appId: String, @RequestBody deleteAppUserRequest: DeleteAppUserRequest) : ResponseEntity<Unit> {
-        appService.deleteUser(appId, deleteAppUserRequest)
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
+    fun deleteUser(@PathVariable appId: UUID, @RequestBody deleteAppUserRequest: DeleteAppUserRequest) : ResponseEntity<Unit> {
+        val isDeleted = appService.deleteUser(appId, deleteAppUserRequest)
+        if (!isDeleted) {
+            return ResponseEntity.badRequest().build()
+        }
+        return ResponseEntity.noContent().build()
     }
 
     private fun Application.toResponse() = when (this) {
