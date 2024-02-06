@@ -1,5 +1,6 @@
 package com.example.ipwhitelist.config
 
+import com.example.ipwhitelist.model.dynamodb.UserRole
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.AuthenticationManager
@@ -40,7 +41,7 @@ class SecurityConfig(
                     .requestMatchers("/api/v1/apps/**")
                     .permitAll()
                     .requestMatchers("/api/v1/admin/*")
-                    .hasRole("ADMIN")
+                    .hasRole(UserRole.ADMIN.name)
                     .anyRequest()
                     .authenticated()
             }

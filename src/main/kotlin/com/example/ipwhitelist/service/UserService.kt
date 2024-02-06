@@ -1,9 +1,9 @@
 package com.example.ipwhitelist.service
 
 import com.example.ipwhitelist.model.CreateUserRequest
-import com.example.ipwhitelist.model.dynamodb.DataClassMappings
-import com.example.ipwhitelist.model.dynamodb.User
+import com.example.ipwhitelist.model.UserResponse
 import com.example.ipwhitelist.model.dynamodb.UserPrincipal
+import com.example.ipwhitelist.model.dynamodb.UserTableKeyPrefix
 import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
 import java.util.*
@@ -12,33 +12,37 @@ import java.util.*
 class UserService(
     private val userRepository: UserRepository
 ) {
-    fun createUser(createUserRequest: CreateUserRequest): UserPrincipal? {
-        val userEntity = createUserRequest.toModel()
-        println("Creating user: $userEntity")
-        userRepository.save(userEntity)
-        return userEntity
+    fun createUser(createUserRequest: CreateUserRequest): UserResponse? {
+        val userPrincipal = createUserRequest.toModel()
+        println("Creating user: $userPrincipal")
+        return userRepository.save(userPrincipal)?.toResponse()
     }
 
-    fun findByEmail(email: String): UserPrincipal? {
-        return userRepository.findUserPrincipalByEmail(email)
+    fun findByEmail(email: String): UserResponse? {
+        return userRepository.findUserPrincipalByEmail(email)?.toResponse()
     }
 
-    fun findById(id: String): User? {
-        return userRepository.findUserByUserId(id)
+    fun findById(id: UUID): UserResponse? {
+        return userRepository.findUserPrincipalByUserId(id.toUserKey())?.toResponse()
     }
 
-    fun deleteById(id: String): Boolean {
+    fun deleteById(id: UUID): Boolean {
         this.findById(id) ?: return false
-
-        userRepository.deleteByUserId(id)
-        return true
+        return userRepository.deleteByUserId(id.toUserKey())
     }
 
-    private fun CreateUserRequest.toModel() = UserPrincipal(
-        userId = UUID.randomUUID().toString(),
-        objectId = DataClassMappings.USER_PRINCIPAL_PREFIX+ UUID.randomUUID().toString(),
-        email = this.email,
-        role = this.role
-    )
+    private fun CreateUserRequest.toModel(): UserPrincipal {
+        val id = UUID.randomUUID()
+        return UserPrincipal(
+            userId = id.toUserKey(), objectId = id.toUserKey(), email = this.email, role = "USER"
+        )
+    }
 
+    private fun UUID.toUserKey() = "${UserTableKeyPrefix.USER.prefix}$this"
+
+    private fun String.fromKey(keyPrefix: UserTableKeyPrefix) = UUID.fromString(substringAfter(keyPrefix.prefix))
+
+    private fun UserPrincipal.toResponse() = UserResponse(
+        id = this.userId.fromKey(UserTableKeyPrefix.USER), email = this.email, role = this.role
+    )
 }

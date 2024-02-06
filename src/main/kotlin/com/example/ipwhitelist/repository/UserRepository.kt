@@ -1,9 +1,6 @@
 package com.example.ipwhitelist.repository
 
-import com.example.ipwhitelist.model.dynamodb.DataClassMappings
-import com.example.ipwhitelist.model.dynamodb.User
-import com.example.ipwhitelist.model.dynamodb.UserOtp
-import com.example.ipwhitelist.model.dynamodb.UserPrincipal
+import com.example.ipwhitelist.model.dynamodb.*
 import org.springframework.stereotype.Repository
 import software.amazon.awssdk.core.pagination.sync.SdkIterable
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
@@ -14,64 +11,94 @@ import software.amazon.awssdk.enhanced.dynamodb.model.Page
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional.sortBeginsWith
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException
+import java.time.Instant
 
 @Repository
 class UserRepository(
     val dynamoDbEnhancedClient: DynamoDbEnhancedClient
 ) {
-    fun <T : User> save(user: T): T {
-        val userTable = getTable(user.javaClass)
-        userTable.putItem(user)
+    fun <T : User> save(user: T): T? {
+        getTable(user.javaClass).putItem(user)
         return user
     }
 
     fun findUserPrincipalByEmail(email: String): UserPrincipal? {
-        val userTable = getTable(UserPrincipal::class.java)
-        val emailGSI = userTable.index("EmailGSI")
+        val emailGSI = getTable(UserPrincipal::class.java).index("EmailGSI")
         val queryConditional = QueryConditional.keyEqualTo {
             it.partitionValue(email)
         }
         val usersWithEmail: SdkIterable<Page<UserPrincipal>>? = emailGSI.query(
-            QueryEnhancedRequest.builder()
-                .queryConditional(queryConditional)
-                .build()
+            QueryEnhancedRequest.builder().queryConditional(queryConditional).build()
         )
         return usersWithEmail?.firstOrNull()?.items()?.firstOrNull()
     }
 
     fun findUserOtpByEmail(email: String): UserOtp? {
-        val userPrincipal = findUserPrincipalByEmail(email)
-        val userId = userPrincipal?.userId
+        val userKey = this.findUserPrincipalByEmail(email)?.userId ?: return null
 
         val userOtpTable = getTable(UserOtp::class.java)
         val queryConditional = sortBeginsWith(
-            Key.builder()
-                .partitionValue(userId)
-                //TODO: Use the OTP mapping prefix
-                .sortValue("OTP-")
-                .build()
+            Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.OTP.prefix).build()
         )
 
-        return userOtpTable.query(queryConditional).items().firstOrNull()
-            ?: throw NoSuchElementException("No UserOtp found for email: $email")
+        return userOtpTable.query(queryConditional).items().firstOrNull {
+            it.expiryDate > Instant.now().toString()
+        }
     }
 
-    fun findUserByUserId(userId: String): User? {
-        val userTable = getTable(User::class.java)
+    fun findUserPrincipalByUserId(userKey: String): UserPrincipal? {
+        val userTable = getTable(UserPrincipal::class.java)
         return userTable.getItem(
-            Key.builder()
-                .partitionValue(userId)
-                .build()
+            Key.builder().partitionValue(userKey).sortValue(userKey).build()
         )
     }
 
-    fun deleteByUserId(userId: String) {
-        val userTable = getTable(User::class.java)
-        userTable.deleteItem(
-            Key.builder()
-                .partitionValue(userId)
-                .build()
-        )
+    fun deleteByUserId(userKey: String): Boolean {
+        val userPrincipalTable = getTable(UserPrincipal::class.java)
+        val userOtpTable = getTable(UserOtp::class.java)
+        val userLocationTable = getTable(UserLocation::class.java)
+        val userIpTable = getTable(UserIp::class.java)
+
+        val userOtpsToDelete = userOtpTable.query(
+            sortBeginsWith(
+                Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.OTP.prefix).build()
+            )
+        ).items()
+        val userLocationsToDelete = userLocationTable.query(
+            sortBeginsWith(
+                Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.LOCATION.prefix).build()
+            )
+        ).items()
+        val userIpsToDelete = userIpTable.query(
+            sortBeginsWith(
+                Key.builder().partitionValue(userKey).sortValue(UserTableKeyPrefix.IP.prefix).build()
+            )
+        ).items()
+
+        try {
+            dynamoDbEnhancedClient.transactWriteItems {
+                it.addDeleteItem(
+                    userPrincipalTable, Key.builder().partitionValue(userKey).sortValue(userKey).build()
+                )
+                userOtpsToDelete.forEach { userOtp ->
+                    it.addDeleteItem(userOtpTable, userOtp)
+                }
+                userLocationsToDelete.forEach { userLocation ->
+                    it.addDeleteItem(userLocationTable, userLocation)
+                }
+                userIpsToDelete.forEach { userIp ->
+                    it.addDeleteItem(userIpTable, userIp)
+                }
+                it.build()
+            }
+            return true
+        } catch (ex: TransactionCanceledException) {
+            ex.cancellationReasons().stream().forEach {
+                println(it.toString())
+            }
+            return false
+        }
     }
 
     private fun <T : User> getTable(clazz: Class<T>): DynamoDbTable<T> {

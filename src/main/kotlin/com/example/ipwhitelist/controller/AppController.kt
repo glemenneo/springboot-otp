@@ -1,8 +1,7 @@
 package com.example.ipwhitelist.controller
 
 import com.example.ipwhitelist.model.*
-import com.example.ipwhitelist.model.dynamodb.Application
-import com.example.ipwhitelist.model.dynamodb.ApplicationDetails
+import com.example.ipwhitelist.model.dynamodb.*
 import com.example.ipwhitelist.service.AppService
 import com.example.ipwhitelist.service.UserService
 import org.springframework.http.HttpStatus
@@ -24,15 +23,15 @@ class AppController(
     @GetMapping
     fun findAppsByUserId(): ResponseEntity<List<EnhancedAppResponse>> {
         val authentication = SecurityContextHolder.getContext().authentication
-        val userPrincipal = userService.findByEmail(authentication.name)
-
-        val userApps = appService.getAppsByUserKey(userPrincipal!!.userId)
+        val userId = userService.findByEmail(authentication.name)!!.id
+        val userKey = "${UserTableKeyPrefix.USER.prefix}$userId"
+        val userApps = appService.getAppsByUserKey(userKey)
 
         return ResponseEntity.ok(userApps)
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('${UserRole.Constants.ADMIN_ROLE}')")
     fun findById(@PathVariable id: UUID): ResponseEntity<AppResponse> {
         val appDetails = appService.findById(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Application with ID $id not found")
         val appAdmins = appService.findAdminsByAppId(id)
@@ -51,7 +50,7 @@ class AppController(
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('${UserRole.Constants.ADMIN_ROLE}')")
     fun createApp(@RequestBody createAppRequest: CreateAppRequest) : ResponseEntity<CreateAppResponse> {
         val appEntity = appService.createApp(createAppRequest)
             ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create application, application already exists!")
@@ -62,7 +61,7 @@ class AppController(
     }
 
     @DeleteMapping("/{appId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('${UserRole.Constants.ADMIN_ROLE}')")
     fun deleteApp(@PathVariable appId: UUID) : ResponseEntity<Unit> {
         val isDeleted = appService.deleteById(appId)
         if (!isDeleted) {
@@ -72,14 +71,14 @@ class AppController(
     }
 
     @PostMapping("/{appId}/users")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('${UserRole.Constants.ADMIN_ROLE}')")
     fun addUser(@PathVariable appId: UUID, @RequestBody addAppUserRequest: AddAppUserRequest) : ResponseEntity<Unit> {
         appService.addUser(appId, addAppUserRequest)
         return ResponseEntity.status(HttpStatus.CREATED).build()
     }
 
     @DeleteMapping("/{appId}/users")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('${UserRole.Constants.ADMIN_ROLE}')")
     fun deleteUser(@PathVariable appId: UUID, @RequestBody deleteAppUserRequest: DeleteAppUserRequest) : ResponseEntity<Unit> {
         val isDeleted = appService.deleteUser(appId, deleteAppUserRequest)
         if (!isDeleted) {
