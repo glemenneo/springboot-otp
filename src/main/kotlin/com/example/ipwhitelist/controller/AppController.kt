@@ -24,7 +24,7 @@ class AppController(
     fun findAppsByUserId(): ResponseEntity<List<EnhancedAppResponse>> {
         val authentication = SecurityContextHolder.getContext().authentication
         val userId = userService.findByEmail(authentication.name)!!.id
-        val userKey = "${UserTableKeyPrefix.USER}$userId"
+        val userKey = "${UserTableKeyPrefix.USER.prefix}$userId"
         val userApps = appService.getAppsByUserKey(userKey)
 
         return ResponseEntity.ok(userApps)
