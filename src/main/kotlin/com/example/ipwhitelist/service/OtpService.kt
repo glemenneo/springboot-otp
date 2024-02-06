@@ -5,17 +5,20 @@ import com.example.ipwhitelist.model.dynamodb.UserOtp
 import com.example.ipwhitelist.model.dynamodb.UserTableKeyPrefix
 import com.example.ipwhitelist.repository.UserRepository
 import org.springframework.stereotype.Service
+import java.security.SecureRandom
 import java.time.Instant
 import java.util.*
 
 @Service
 class OtpService(
-    private val userRepository: UserRepository,
-    private val userService: UserService
+    private val userRepository: UserRepository, private val userService: UserService
 ) {
-    fun generateOtp(email: String): String {
-        val otp = (10000..999999).random().toString()
+    companion object {
+        private const val OTP_MAX = 999999
+    }
 
+    fun generateOtp(email: String): String {
+        val otp = SecureRandom().nextInt(OTP_MAX).toString().padStart(6, '0')
         // Check if the user already exists
         var user = userService.findByEmail(email)
 
